@@ -138,9 +138,8 @@ def logo(variant):
             '<use href="#logo"/></svg>')
 
 
-def head(tag, title, sub=None, tag_cls="tag"):
-    parts = [logo("c"), f'<span class="b {tag_cls}">{escape(tag)}</span>',
-             f'<h2 class="h1">{escape(title)}</h2>']
+def head(title, sub=None):
+    parts = [logo("c"), f'<h2 class="h1">{escape(title)}</h2>']
     if sub:
         parts.append(f'<p class="sub">{escape(sub)}</p>')
     return "".join(parts)
@@ -177,8 +176,7 @@ def slide_plan():
         '<div class="slide s-plan">'
         '<svg class="air" viewBox="0 0 1020 1080" aria-hidden="true"><use href="#air"/></svg>'
         + logo("w")
-        + '<span class="b tag tag--w">Сейчас: 3 этап</span>'
-        '<h2 class="h1 h1--plan">План работы</h2>'
+        + '<h2 class="h1 h1--plan">План работы</h2>'
         f'<ol class="cards">{"".join(cards)}</ol></div>'
     )
 
@@ -195,44 +193,38 @@ def slide_dirs():
             f'<span class="dir-txt"><b>{escape(d["short"])}</b><small>{escape(d["sub"])}</small></span></div>'
             f'<ul class="chips">{themes}</ul></section>'
         )
-    return ('<div class="slide s-dirs">' + head("Темы и образы города", "Иконки: четыре направления")
+    return ('<div class="slide s-dirs">' + head("Иконки: четыре направления")
             + f'<div class="dirs">{"".join(rows)}</div></div>')
 
 
-# ---------- Слайды 15–18 · Иконки по направлениям ----------
-def split_rows(items, cols):
-    n_rows = -(-len(items) // cols)
-    base, extra = divmod(len(items), n_rows)
-    rows, i = [], 0
-    for r in range(n_rows):
-        take = base + (1 if r < extra else 0)
-        rows.append(items[i:i + take])
-        i += take
-    return rows
+# ---------- Слайды 15–18 · Иконки по направлениям: плитка ----------
+# колонки × ряды; свободные ячейки занимают информационные плитки, чтобы сетка была полной
+GRIDS = {"main": (4, 2), "inv": (3, 2), "tour": (5, 3), "youth": (5, 2)}
 
 
-DOT_BY_ROWS = {2: 168, 3: 128, 4: 92}
-
-
-def tile(name, key):
-    return (f'<li class="tile"><span class="dot dot--soft">{icon(name, "ic-" + key)}</span>'
-            f'<span class="b chip chip--label">{escape(name)}</span></li>')
+def info_tiles(d, free):
+    tiles = [f'<li class="tile tile--info"><b>{len(d["icons"])}</b><span>иконок в направлении</span></li>']
+    if d["key"] == "tour":
+        tiles.append(f'<li class="tile tile--info"><b>{len(PHOTO_BASED)}</b>'
+                     '<span>иконок нарисованы по фотографиям</span></li>')
+    return tiles[:free]
 
 
 def slide_group(d):
-    cols = 3 if len(d["icons"]) == 6 else 4
-    rows = split_rows(d["icons"], cols)
-    grid = "".join(f'<ul class="grid-row">{"".join(tile(n, d["key"]) for n in r)}</ul>' for r in rows)
+    cols, rows = GRIDS[d["key"]]
+    tiles = [f'<li class="tile">{icon(n, "ic-" + d["key"])}<span class="b chip chip--label">{escape(n)}</span></li>'
+             for n in d["icons"]]
+    tiles += info_tiles(d, cols * rows - len(tiles))
     return (
-        f'<div class="slide s-group d-{d["key"]}" style="--cols:{cols};--d:{DOT_BY_ROWS[len(rows)]}px">'
-        + head(f'Иконки / {d["no"]}', d["name"], d["sub"])
+        f'<div class="slide s-group d-{d["key"]}">'
+        + head(d["name"], d["sub"])
         + '<div class="group"><div class="hero">'
         '<svg class="hero-flow" viewBox="0 0 632 674" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
         '<use href="#flow"/></svg>'
         f'<span class="b hero-tag">{escape(d["short"])}</span>'
         f'<div class="hero-dot">{main_icon(d)}</div>'
         '<span class="b hero-name">Главная иконка</span></div>'
-        f'<div class="grid">{grid}</div></div></div>'
+        f'<ul class="tiles" style="--cols:{cols};--rows:{rows}">{"".join(tiles)}</ul></div></div>'
     )
 
 
@@ -243,30 +235,35 @@ def slide_photos():
             pic = icon(name, "ic-tour")
         else:
             pic = '<span class="tbd tbd--sq">иконка<br>в работе</span>'
-        return (f'<li class="pair"><div class="dip">'
+        return (f'<li class="pcell"><div class="dip">'
                 f'<div class="photo" role="img" aria-label="Место для фото: {escape(name)}">'
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16'
                 'a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2'
                 'a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg><span>фото</span></div>'
                 f'<div class="dip-icon">{pic}</div></div>'
                 f'<span class="b chip chip--label">{escape(name)}</span></li>')
-    rows = split_rows(PHOTO_BASED, 4)
-    body = "".join(f'<ul class="pair-row">{"".join(pair(n) for n in r)}</ul>' for r in rows)
-    return ('<div class="slide s-photos d-tour">'
-            + head("Иконки / 03", "Иконки по фотографиям",
-                   "Узнаваемые места и традиции Заводоуковска нарисованы с реальных снимков")
-            + f'<div class="pairs">{body}</div></div>')
+    intro = (f'<li class="pcell"><div class="pintro"><b>{len(PHOTO_BASED)}</b>'
+             '<span>иконок туризма нарисованы по фотографиям реальных мест и традиций Заводоуковска</span></div></li>')
+    cells = intro + "".join(pair(n) for n in PHOTO_BASED)
+    return ('<div class="slide s-photos d-tour">' + head("Иконки по фотографиям", "Туризм и имидж города")
+            + f'<ul class="pcells">{cells}</ul></div>')
 
 
 # ---------- Слайд 19 · Все 36 иконок ----------
+def legend_icon(d):
+    if d["main"] is None:
+        return '<span class="lg-tbd" title="иконка в работе"></span>'
+    return ic(d["main"], "Главная иконка: " + d["short"], "lg-ic")
+
+
 def slide_all():
-    legend = "".join(f'<span class="lg d-{d["key"]}"><span class="lg-mark"></span>{escape(d["short"])}'
+    legend = "".join(f'<span class="lg d-{d["key"]}">{legend_icon(d)}{escape(d["short"])}'
                      f'<i>{len(d["icons"])}</i></span>' for d in DIRS)
     cells = "".join(f'<li title="{escape(n)}">{icon(n, "ic-" + GROUP[n])}</li>' for n in ALL_ICONS)
     # сетка 9 колонок; размер иконки подстраивается под число рядов (иконок станет 42–43)
     rows = -(-len(ALL_ICONS) // 9)
-    size = min(156, (680 - (rows - 1) * 10) // rows)
-    return ('<div class="slide s-all">' + head(f"{len(ALL_ICONS)} иконок / единая система", "Город в деталях")
+    size = min(156, (720 - (rows - 1) * 10) // rows)
+    return ('<div class="slide s-all">' + head("Город в деталях")
             + f'<div class="legend">{legend}</div><ul class="all" style="--size:{size}px">{cells}</ul></div>')
 
 

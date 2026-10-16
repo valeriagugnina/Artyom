@@ -93,9 +93,9 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 }
 .tag { position: absolute; right: 60px; top: 64px; font: 400 22px/1 var(--f-text); padding: 14px 26px; border-color: var(--zk-navy); color: var(--zk-navy); }
 .tag--w { border-color: var(--zk-white); color: var(--zk-white); }
-.chip { height: 48px; padding: 0 20px 0 12px; font: 400 17px/1 var(--f-text); background: var(--zk-white); border: 1.5px solid var(--line); color: var(--zk-navy); }
+.chip { height: 46px; padding: 0 20px 0 12px; font: 400 16px/1 var(--f-text); background: var(--zk-white); border: 1.5px solid var(--line); color: var(--c); }
 .chip .ic { width: 34px; height: 34px; flex: none; }
-.chip--label { padding: 0 16px; }
+.chip--label { padding: 0 14px; }
 
 /* кружки и иконки; иконки всегда в градиенте своего направления */
 .dot { display: grid; place-items: center; border-radius: 50%; flex: none; container-type: inline-size; }
@@ -109,7 +109,7 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .tbd { display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed var(--c); color: var(--c); font: 700 12cqi/1.15 var(--f-wide); text-align: center; }
 
 /* направления: светлая обводка бабблов, градиент иконок и карточек */
-.slide { --line: var(--zk-cyan); }
+.slide { --c: var(--zk-blue); --line: var(--zk-cyan); }
 .d-main, .d-inv { --c: var(--zk-blue); --line: var(--zk-cyan); --gi: url(#gr-blue); --hero: var(--hero-blue);
                   --gl: linear-gradient(45deg, #003DA5 0%, #2CD5C4 35%, #00A9E0 70%); }
 .d-tour  { --c: var(--zk-green); --line: var(--zk-mint); --gi: url(#gr-tour); --hero: var(--hero-tour);
@@ -127,7 +127,7 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .card-no { font: 700 44px/1.1 var(--f-wide); }
 .card-title { margin: 0; min-height: 2.24em; font: 700 39px/1.12 var(--f-wide); }
 .steps { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
-.step { height: 48px; padding: 0 22px; font: 400 20px/1 var(--f-text); border: 1.5px solid var(--line); color: var(--zk-navy); }
+.step { height: 48px; padding: 0 22px; font: 400 20px/1 var(--f-text); border: 1.5px solid var(--line); color: var(--c); }
 .is-now .step { border-color: var(--zk-white); color: var(--zk-white); }
 .result { margin-top: auto; padding-top: 18px; border-top: 1.5px solid rgba(21, 31, 109, .16); display: grid; gap: 10px; }
 .is-now .result { border-top-color: rgba(255, 255, 255, .5); }
@@ -147,24 +147,30 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .chips { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* ---------- слайды 15–18 · иконки по направлениям ---------- */
-.group { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: grid; grid-template-columns: 480px 1fr; gap: 36px; }
+.group { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: grid; grid-template-columns: 435px 1fr; gap: 20px; }
 .hero { position: relative; overflow: hidden; background: var(--hero); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 28px; }
 .hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--zk-white); opacity: .14; }
 .hero-tag, .hero-name, .hero-dot { position: relative; }
-.hero-tag { background: var(--zk-white); color: var(--zk-navy); padding: 14px 28px; }
+.hero-tag { background: var(--zk-white); color: var(--c); padding: 14px 28px; }
 .hero-name { border-color: var(--zk-white); color: var(--zk-white); font: 400 22px/1 var(--f-text); padding: 14px 26px; }
-.hero-dot .dot { width: 300px; height: 300px; box-shadow: 0 10px 28px rgba(14, 18, 60, .1); }
-.grid { display: flex; flex-direction: column; justify-content: space-evenly; min-width: 0; }
-.grid-row { display: flex; justify-content: center; gap: 16px; }
-.tile { flex: 0 0 calc((100% - (var(--cols) - 1) * 16px) / var(--cols)); display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
-.tile .dot { width: var(--d); height: var(--d); }
+.hero-dot .dot { width: 280px; height: 280px; box-shadow: 0 10px 28px rgba(14, 18, 60, .1); }
+/* плитка: серые квадраты, иконка по центру, подпись-баббл внизу */
+.tiles { display: grid; grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); grid-template-rows: repeat(var(--rows), minmax(0, 1fr)); gap: 20px; min-width: 0; }
+.tile { background: var(--zk-gray); display: grid; grid-template-rows: minmax(0, 1fr) auto; justify-items: center; align-items: center; padding: 14px 0 18px; min-width: 0; container-type: size; }
+.tile > .ic { width: 62cqmin; height: 62cqmin; }
+.tile--info { grid-template-rows: auto auto; align-content: center; gap: 10px; color: var(--c); text-align: center; }
+.tile--info b { font: 700 88px/1 var(--f-wide); }
+.tile--info span { max-width: 80%; font: 400 18px/1.25 var(--f-text); }
 
 /* ---------- слайд 17а · иконки по фотографиям ---------- */
-.pairs { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: flex; flex-direction: column; justify-content: space-evenly; }
-.pair-row { display: flex; justify-content: center; gap: 20px; }
-.pair { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-.dip { display: flex; }
-.photo, .dip-icon { width: 210px; height: 210px; }
+/* сетка 4 колонки по 435 px, как карточки в плане работы */
+.pcells { position: absolute; left: 60px; top: 338px; width: 1800px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 20px; }
+.pcell { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-width: 0; }
+.dip { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+.photo, .dip-icon { aspect-ratio: 1; }
+.pintro { width: 100%; aspect-ratio: 2 / 1; padding: 28px; background: var(--hero); color: var(--zk-white); display: flex; flex-direction: column; justify-content: space-between; }
+.pintro b { font: 700 72px/1 var(--f-wide); }
+.pintro span { font: 400 20px/1.3 var(--f-text); max-width: 34ch; }
 .photo { background: #EEF5F0; border: 2px dashed rgba(0, 132, 61, .35); color: rgba(0, 132, 61, .7); display: grid; place-content: center; justify-items: center; gap: 6px; font: 400 16px/1 var(--f-text); }
 .photo svg { width: 48px; height: 48px; fill: currentColor; }
 .dip-icon { background: var(--zk-gray); display: grid; place-items: center; container-type: inline-size; }
@@ -172,19 +178,20 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .tbd--sq { border-radius: 0; width: 66%; }
 
 /* ---------- слайд 19 · все иконки, без кружков ---------- */
-.legend { position: absolute; left: 60px; top: 282px; display: flex; gap: 44px; }
-.lg { display: inline-flex; align-items: center; gap: 12px; font: 700 22px/1 var(--f-wide); color: var(--zk-navy); }
-.lg-mark { width: 22px; height: 22px; background: var(--gl); }
-.lg i { font: 400 22px/1 var(--f-text); font-style: normal; color: rgba(21, 31, 109, .5); }
-.all { position: absolute; left: 60px; top: 340px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px 0; justify-items: center; }
+.legend { position: absolute; right: 60px; top: 178px; display: flex; align-items: center; gap: 32px; }
+.lg { display: inline-flex; align-items: center; gap: 10px; font: 700 21px/1 var(--f-wide); color: var(--c); }
+.lg-ic { width: 52px; height: 52px; }
+.lg-tbd { width: 36px; height: 36px; margin: 8px; border-radius: 50%; border: 2px dashed var(--c); }
+.lg i { font: 400 21px/1 var(--f-text); font-style: normal; opacity: .55; }
+.all { position: absolute; left: 60px; top: 290px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px 0; justify-items: center; }
 .all .ic { width: var(--size, 156px); height: var(--size, 156px); }
 </style>
 
 <div class="wrap">
   <header class="intro">
-    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma · версия 3</p>
+    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma · версия 4</p>
     <h1>План работы и иконки в бабблах</h1>
-    <p>Слайды 2, 14–19 из страницы «3_этап_Заводоуковск_ребрендинг 2». В этой версии бабблы идут по ширине текста с одинаковыми полями и тонкой светлой обводкой, карточки направлений и главные карточки — с прямыми углами и градиентом, слайд 17а собран из пар «фото | иконка», легенда на последнем слайде без бабблов.</p>
+    <p>Слайды 2, 14–19 из страницы «3_этап_Заводоуковск_ребрендинг 2». В этой версии: без шильдиков в правом углу, текст бабблов в цвет направления, иконки направлений лежат в серой плитке по сетке, слайд 17а выровнен по четырём колонкам плана работы, легенда последнего слайда справа от заголовка с главными иконками.</p>
     <ul class="checks">
       <li>Главные иконки «Инвестиций» и «Молодёжи» временные: варианты Money и Award из набора Icons. Для «Туризма» стоит заглушка, пока иконка рисуется.</li>
       <li>На слайде 17а вместо фотографий стоят рамки: в файле не нашлось исходных снимков для этих иконок. Фото вставляются при переносе в Figma.</li>
