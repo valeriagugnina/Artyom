@@ -17,6 +17,9 @@
   --zk-blue: #003DA5;
   --zk-green: #00843D;
   --zk-red: #E4002B;
+  --zk-cyan: #00A9E0;
+  --zk-mint: #47D7AC;
+  --zk-orange: #FF6900;
   --zk-white: #FFFFFF;
   --zk-gray: #F3F3F3;
   /* фоны-«шейдеры» панелей: у основного и инвестиций один и тот же */
@@ -90,7 +93,7 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 }
 .tag { position: absolute; right: 60px; top: 64px; font: 400 22px/1 var(--f-text); padding: 14px 26px; border-color: var(--zk-navy); color: var(--zk-navy); }
 .tag--w { border-color: var(--zk-white); color: var(--zk-white); }
-.chip { height: 48px; padding: 0 20px 0 12px; font: 400 17px/1 var(--f-text); background: var(--zk-white); border-color: var(--c); color: var(--zk-navy); }
+.chip { height: 48px; padding: 0 20px 0 12px; font: 400 17px/1 var(--f-text); background: var(--zk-white); border: 1.5px solid var(--line); color: var(--zk-navy); }
 .chip .ic { width: 34px; height: 34px; flex: none; }
 .chip--label { padding: 0 16px; }
 
@@ -105,10 +108,14 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .ic-youth { fill: url(#gr-youth); }
 .tbd { display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed var(--c); color: var(--c); font: 700 12cqi/1.15 var(--f-wide); text-align: center; }
 
-/* направления: цвет бабблов и градиент иконок */
-.d-main, .d-inv { --c: var(--zk-blue); --gi: url(#gr-blue); --hero: var(--hero-blue); }
-.d-tour  { --c: var(--zk-green); --gi: url(#gr-tour); --hero: var(--hero-tour); }
-.d-youth { --c: var(--zk-red); --gi: url(#gr-youth); --hero: var(--hero-youth); }
+/* направления: светлая обводка бабблов, градиент иконок и карточек */
+.slide { --line: var(--zk-cyan); }
+.d-main, .d-inv { --c: var(--zk-blue); --line: var(--zk-cyan); --gi: url(#gr-blue); --hero: var(--hero-blue);
+                  --gl: linear-gradient(45deg, #003DA5 0%, #2CD5C4 35%, #00A9E0 70%); }
+.d-tour  { --c: var(--zk-green); --line: var(--zk-mint); --gi: url(#gr-tour); --hero: var(--hero-tour);
+           --gl: linear-gradient(45deg, #00843D 0%, #47D7AC 35%, #DDF314 70%); }
+.d-youth { --c: var(--zk-red); --line: var(--zk-orange); --gi: url(#gr-youth); --hero: var(--hero-youth);
+           --gl: linear-gradient(45deg, #E4002B 0%, #FFC851 35%, #FF6900 70%); }
 
 /* ---------- слайд 2 · план работы ---------- */
 .s-plan { background: var(--zk-navy); color: var(--zk-white); }
@@ -119,8 +126,8 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .card.is-now { background: var(--hero-blue); color: var(--zk-white); }
 .card-no { font: 700 44px/1.1 var(--f-wide); }
 .card-title { margin: 0; min-height: 2.24em; font: 700 39px/1.12 var(--f-wide); }
-.steps { display: flex; flex-direction: column; gap: 10px; }
-.step { width: 100%; height: 50px; padding: 0 16px; font: 400 20px/1 var(--f-text); border-color: var(--zk-navy); color: var(--zk-navy); }
+.steps { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.step { height: 48px; padding: 0 22px; font: 400 20px/1 var(--f-text); border: 1.5px solid var(--line); color: var(--zk-navy); }
 .is-now .step { border-color: var(--zk-white); color: var(--zk-white); }
 .result { margin-top: auto; padding-top: 18px; border-top: 1.5px solid rgba(21, 31, 109, .16); display: grid; gap: 10px; }
 .is-now .result { border-top-color: rgba(255, 255, 255, .5); }
@@ -129,10 +136,11 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .result p { margin: 0; min-height: 3.9em; font: 400 22px/1.3 var(--f-text); }
 
 /* ---------- слайд 14 · четыре направления ---------- */
-.dirs { position: absolute; left: 60px; top: 300px; width: 1800px; display: flex; flex-direction: column; gap: 24px; }
-.dir { display: grid; grid-template-columns: 450px 1fr; gap: 32px; align-items: center; }
-.dir-pill { justify-content: flex-start; gap: 20px; padding: 12px 36px 12px 12px; min-height: 120px; white-space: normal; background: var(--c); color: var(--zk-white); }
-.dir-pill .dot { width: 96px; height: 96px; }
+.dirs { position: absolute; left: 60px; top: 300px; width: 1800px; display: flex; flex-direction: column; gap: 20px; }
+.dir { display: grid; grid-template-columns: 450px 1fr; gap: 32px; align-items: stretch; }
+.dir-card { display: flex; align-items: center; gap: 22px; padding: 18px 28px 18px 18px; min-height: 124px; background: var(--hero); color: var(--zk-white); }
+.dir-card .dot { width: 88px; height: 88px; }
+.chips { align-content: center; }
 .dir-txt { display: flex; flex-direction: column; gap: 6px; }
 .dir-txt b { font: 700 30px/1.05 var(--f-wide); }
 .dir-txt small { font: 400 17px/1.22 var(--f-text); opacity: .92; }
@@ -140,7 +148,7 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 
 /* ---------- слайды 15–18 · иконки по направлениям ---------- */
 .group { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: grid; grid-template-columns: 480px 1fr; gap: 36px; }
-.hero { position: relative; overflow: hidden; border-radius: 48px; background: var(--hero); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 28px; }
+.hero { position: relative; overflow: hidden; background: var(--hero); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 28px; }
 .hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--zk-white); opacity: .14; }
 .hero-tag, .hero-name, .hero-dot { position: relative; }
 .hero-tag { background: var(--zk-white); color: var(--zk-navy); padding: 14px 28px; }
@@ -153,27 +161,30 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 
 /* ---------- слайд 17а · иконки по фотографиям ---------- */
 .pairs { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: flex; flex-direction: column; justify-content: space-evenly; }
-.pair-row { display: flex; justify-content: center; gap: 40px; }
-.pair { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.pair-media { display: flex; align-items: center; gap: 12px; }
-.photo { width: 180px; height: 180px; border-radius: 40px; background: #EEF5F0; border: 2px dashed rgba(0, 132, 61, .35); color: rgba(0, 132, 61, .7); display: grid; place-content: center; justify-items: center; gap: 6px; font: 400 16px/1 var(--f-text); }
-.photo svg { width: 44px; height: 44px; fill: currentColor; }
-.arrow { width: 40px; height: 20px; fill: none; stroke: var(--c); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
-.pair .dot { width: 150px; height: 150px; }
+.pair-row { display: flex; justify-content: center; gap: 20px; }
+.pair { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.dip { display: flex; }
+.photo, .dip-icon { width: 210px; height: 210px; }
+.photo { background: #EEF5F0; border: 2px dashed rgba(0, 132, 61, .35); color: rgba(0, 132, 61, .7); display: grid; place-content: center; justify-items: center; gap: 6px; font: 400 16px/1 var(--f-text); }
+.photo svg { width: 48px; height: 48px; fill: currentColor; }
+.dip-icon { background: var(--zk-gray); display: grid; place-items: center; container-type: inline-size; }
+.dip-icon .ic { width: 78%; height: 78%; }
+.tbd--sq { border-radius: 0; width: 66%; }
 
 /* ---------- слайд 19 · все иконки, без кружков ---------- */
-.legend { position: absolute; left: 60px; top: 274px; display: flex; gap: 14px; }
-.lg { background: var(--c); color: var(--zk-white); font-size: 22px; padding: 8px 8px 8px 24px; }
-.lg i { font: 700 18px/1 var(--f-wide); font-style: normal; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--zk-white); color: var(--zk-navy); }
-.all { position: absolute; left: 60px; top: 352px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px 0; justify-items: center; }
-.all .ic { width: 156px; height: 156px; }
+.legend { position: absolute; left: 60px; top: 282px; display: flex; gap: 44px; }
+.lg { display: inline-flex; align-items: center; gap: 12px; font: 700 22px/1 var(--f-wide); color: var(--zk-navy); }
+.lg-mark { width: 22px; height: 22px; background: var(--gl); }
+.lg i { font: 400 22px/1 var(--f-text); font-style: normal; color: rgba(21, 31, 109, .5); }
+.all { position: absolute; left: 60px; top: 340px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px 0; justify-items: center; }
+.all .ic { width: var(--size, 156px); height: var(--size, 156px); }
 </style>
 
 <div class="wrap">
   <header class="intro">
-    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma · версия 2</p>
+    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma · версия 3</p>
     <h1>План работы и иконки в бабблах</h1>
-    <p>Слайды 2, 14–19 из страницы «3_этап_Заводоуковск_ребрендинг 2» с правками: план работы вернулся к четырём карточкам, бабблы стали одноцветными, у направлений появились главные иконки, на последнем слайде иконки без кружков. Добавлен слайд 17а с иконками туризма, нарисованными по фотографиям.</p>
+    <p>Слайды 2, 14–19 из страницы «3_этап_Заводоуковск_ребрендинг 2». В этой версии бабблы идут по ширине текста с одинаковыми полями и тонкой светлой обводкой, карточки направлений и главные карточки — с прямыми углами и градиентом, слайд 17а собран из пар «фото | иконка», легенда на последнем слайде без бабблов.</p>
     <ul class="checks">
       <li>Главные иконки «Инвестиций» и «Молодёжи» временные: варианты Money и Award из набора Icons. Для «Туризма» стоит заглушка, пока иконка рисуется.</li>
       <li>На слайде 17а вместо фотографий стоят рамки: в файле не нашлось исходных снимков для этих иконок. Фото вставляются при переносе в Figma.</li>

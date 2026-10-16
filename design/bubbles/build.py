@@ -191,7 +191,7 @@ def slide_dirs():
                          for n in d["icons"])
         rows.append(
             f'<section class="dir d-{d["key"]}">'
-            f'<div class="b dir-pill">{main_icon(d)}'
+            f'<div class="dir-card">{main_icon(d)}'
             f'<span class="dir-txt"><b>{escape(d["short"])}</b><small>{escape(d["sub"])}</small></span></div>'
             f'<ul class="chips">{themes}</ul></section>'
         )
@@ -240,16 +240,16 @@ def slide_group(d):
 def slide_photos():
     def pair(name):
         if name in IDS:
-            pic = f'<span class="dot dot--soft">{icon(name, "ic-tour")}</span>'
+            pic = icon(name, "ic-tour")
         else:
-            pic = '<span class="dot dot--soft"><span class="tbd tbd--tour">иконка<br>в работе</span></span>'
-        return (f'<li class="pair"><div class="pair-media">'
+            pic = '<span class="tbd tbd--sq">иконка<br>в работе</span>'
+        return (f'<li class="pair"><div class="dip">'
                 f'<div class="photo" role="img" aria-label="Место для фото: {escape(name)}">'
                 '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16'
                 'a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9Zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Zm0 2'
                 'a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg><span>фото</span></div>'
-                '<svg class="arrow" viewBox="0 0 48 24" aria-hidden="true"><path d="M2 12h40m-8-8 8 8-8 8"/></svg>'
-                f'{pic}</div><span class="b chip chip--label">{escape(name)}</span></li>')
+                f'<div class="dip-icon">{pic}</div></div>'
+                f'<span class="b chip chip--label">{escape(name)}</span></li>')
     rows = split_rows(PHOTO_BASED, 4)
     body = "".join(f'<ul class="pair-row">{"".join(pair(n) for n in r)}</ul>' for r in rows)
     return ('<div class="slide s-photos d-tour">'
@@ -260,11 +260,14 @@ def slide_photos():
 
 # ---------- Слайд 19 · Все 36 иконок ----------
 def slide_all():
-    legend = "".join(f'<span class="b lg d-{d["key"]}">{escape(d["short"])}<i>{len(d["icons"])}</i></span>'
-                     for d in DIRS)
+    legend = "".join(f'<span class="lg d-{d["key"]}"><span class="lg-mark"></span>{escape(d["short"])}'
+                     f'<i>{len(d["icons"])}</i></span>' for d in DIRS)
     cells = "".join(f'<li title="{escape(n)}">{icon(n, "ic-" + GROUP[n])}</li>' for n in ALL_ICONS)
-    return ('<div class="slide s-all">' + head("36 иконок / единая система", "Город в деталях")
-            + f'<div class="legend">{legend}</div><ul class="all">{cells}</ul></div>')
+    # сетка 9 колонок; размер иконки подстраивается под число рядов (иконок станет 42–43)
+    rows = -(-len(ALL_ICONS) // 9)
+    size = min(156, (680 - (rows - 1) * 10) // rows)
+    return ('<div class="slide s-all">' + head(f"{len(ALL_ICONS)} иконок / единая система", "Город в деталях")
+            + f'<div class="legend">{legend}</div><ul class="all" style="--size:{size}px">{cells}</ul></div>')
 
 
 def frame(no, caption, slide_html):
