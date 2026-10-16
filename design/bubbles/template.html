@@ -15,10 +15,21 @@
   /* фирменная палитра Заводоуковска */
   --zk-navy: #151F6D;
   --zk-blue: #003DA5;
-  --zk-cyan: #00A9E0;
-  --zk-turq: #2CD5C4;
+  --zk-green: #00843D;
+  --zk-red: #E4002B;
   --zk-white: #FFFFFF;
   --zk-gray: #F3F3F3;
+  /* фоны-«шейдеры» панелей: у основного и инвестиций один и тот же */
+  --hero-blue: radial-gradient(75% 60% at 0% 100%, #003DA5 0%, rgba(0, 61, 165, 0) 100%),
+               radial-gradient(70% 60% at 100% 0%, #00A9E0 0%, rgba(0, 169, 224, 0) 100%),
+               radial-gradient(60% 50% at 100% 100%, #47D7AC 0%, rgba(71, 215, 172, 0) 100%),
+               linear-gradient(160deg, #2CD5C4 0%, #1C86C9 100%);
+  --hero-tour: radial-gradient(75% 60% at 0% 100%, #00843D 0%, rgba(0, 132, 61, 0) 100%),
+               radial-gradient(70% 60% at 100% 0%, #DDF314 0%, rgba(221, 243, 20, 0) 100%),
+               linear-gradient(160deg, #47D7AC 0%, #1FA766 100%);
+  --hero-youth: radial-gradient(75% 60% at 0% 100%, #E4002B 0%, rgba(228, 0, 43, 0) 100%),
+                radial-gradient(70% 60% at 100% 0%, #FFC851 0%, rgba(255, 200, 81, 0) 100%),
+                linear-gradient(160deg, #FF8A2A 0%, #FF6900 100%);
   /* шрифты: Actay, если установлен; иначе Montserrat — почти та же ширина строки */
   --f-wide: "Actay Wide", "Montserrat", Arial, sans-serif;
   --f-text: "Actay", "Montserrat", Arial, sans-serif;
@@ -42,13 +53,13 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
   padding-block: 40px 72px;
   display: flex; flex-direction: column; gap: 40px;
 }
-.intro { display: grid; gap: 14px; max-width: 70ch; }
+.intro { display: grid; gap: 14px; max-width: 72ch; }
 .eyebrow { margin: 0; font: 700 12px/1.3 var(--f-wide); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .intro h1 { margin: 0; font: 700 clamp(28px, 4vw, 44px)/1.05 var(--f-wide); text-wrap: balance; }
 .intro p { margin: 0; font-size: 16px; line-height: 1.55; color: var(--muted); }
 .checks { margin: 4px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; font-size: 15px; line-height: 1.5; }
 .checks li { padding-left: 18px; position: relative; }
-.checks li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--zk-turq); }
+.checks li::before { content: ""; position: absolute; left: 0; top: .55em; width: 8px; height: 8px; border-radius: 50%; background: var(--zk-blue); }
 .deck { display: flex; flex-direction: column; gap: 44px; }
 .shot { margin: 0; display: grid; gap: 12px; min-width: 0; }
 .shot figcaption { display: flex; gap: 12px; align-items: baseline; font: 700 15px/1.3 var(--f-wide); }
@@ -66,118 +77,108 @@ body { background: var(--page); color: var(--ink); font-family: var(--f-text); }
 .slide *, .slide *::before, .slide *::after { box-sizing: border-box; }
 .slide ul, .slide ol { list-style: none; margin: 0; padding: 0; }
 .logo { position: absolute; left: 60px; top: 58px; width: 330px; height: 63px; }
-.logo--c { --lt: var(--zk-navy); --lm: url(#gr-logo); }
+.logo--c { --lt: var(--zk-navy); --lm: url(#gr-blue); }
 .logo--w { --lt: var(--zk-white); --lm: var(--zk-white); }
 .h1 { position: absolute; left: 60px; top: 166px; margin: 0; font: 700 68px/1.08 var(--f-wide); letter-spacing: -.01em; }
-.h1--big { font-size: 76px; }
 .sub { position: absolute; left: 60px; top: 254px; margin: 0; font: 400 28px/1.2 var(--f-text); }
-.tag { position: absolute; right: 60px; top: 64px; font: 400 22px/1 var(--f-text); padding: 16px 28px; }
 
-/* ---------- бабблы ---------- */
+/* ---------- бабблы: заливка и обводка одним цветом, без градиента ---------- */
 .b {
-  display: inline-flex; align-items: center; justify-content: center; gap: 12px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 10px;
   border-radius: 999px; border: 2px solid transparent; white-space: nowrap;
   font: 700 24px/1.1 var(--f-wide);
 }
-.b--white { background: var(--zk-white); color: var(--zk-navy); }
-.b--line-w { border-color: var(--zk-white); color: var(--zk-white); }
-.b--line-g { background: linear-gradient(var(--zk-white), var(--zk-white)) padding-box, var(--g, linear-gradient(115deg, #003DA5, #2CD5C4 55%, #00A9E0)) border-box; color: var(--zk-navy); }
-.b--fill-g { background: var(--g) padding-box; color: var(--zk-white); }
-.dot { display: grid; place-items: center; border-radius: 50%; flex: none; }
-.dot--g { background: var(--g); }
-.dot--w { background: var(--zk-white); }
-.ic { display: block; width: 64%; height: 64%; }
-.ic--w { fill: var(--zk-white); }
-.ic--g { fill: var(--gi); }
+.tag { position: absolute; right: 60px; top: 64px; font: 400 22px/1 var(--f-text); padding: 14px 26px; border-color: var(--zk-navy); color: var(--zk-navy); }
+.tag--w { border-color: var(--zk-white); color: var(--zk-white); }
+.chip { height: 48px; padding: 0 20px 0 12px; font: 400 17px/1 var(--f-text); background: var(--zk-white); border-color: var(--c); color: var(--zk-navy); }
+.chip .ic { width: 34px; height: 34px; flex: none; }
+.chip--label { padding: 0 16px; }
 
-/* направления: свой градиент у каждого */
-.d-main  { --g: linear-gradient(115deg, #151F6D 0%, #1A3C9E 55%, #00A9E0 100%); --gi: url(#gr-main); }
-.d-inv   { --g: linear-gradient(115deg, #003DA5 0%, #00A9E0 55%, #2CD5C4 100%); --gi: url(#gr-inv); }
-.d-tour  { --g: linear-gradient(115deg, #00843D 0%, #36C08E 55%, #C7E51C 100%); --gi: url(#gr-tour); }
-.d-youth { --g: linear-gradient(115deg, #E4002B 0%, #FF6900 55%, #FFB54A 100%); --gi: url(#gr-youth); }
-.d-logo  { --g: linear-gradient(115deg, #003DA5 0%, #2CD5C4 55%, #00A9E0 100%); --gi: url(#gr-logo); }
+/* кружки и иконки; иконки всегда в градиенте своего направления */
+.dot { display: grid; place-items: center; border-radius: 50%; flex: none; container-type: inline-size; }
+.dot--w { background: var(--zk-white); }
+.dot--soft { background: var(--zk-gray); }
+.dot .ic { width: 66%; height: 66%; }
+.ic { display: block; fill: var(--gi, url(#gr-blue)); }
+.ic-main, .ic-inv { fill: url(#gr-blue); }
+.ic-tour { fill: url(#gr-tour); }
+.ic-youth { fill: url(#gr-youth); }
+.tbd { display: grid; place-items: center; width: 80%; aspect-ratio: 1; border-radius: 50%; border: 2px dashed var(--c); color: var(--c); font: 700 12cqi/1.15 var(--f-wide); text-align: center; }
+
+/* направления: цвет бабблов и градиент иконок */
+.d-main, .d-inv { --c: var(--zk-blue); --gi: url(#gr-blue); --hero: var(--hero-blue); }
+.d-tour  { --c: var(--zk-green); --gi: url(#gr-tour); --hero: var(--hero-tour); }
+.d-youth { --c: var(--zk-red); --gi: url(#gr-youth); --hero: var(--hero-youth); }
 
 /* ---------- слайд 2 · план работы ---------- */
 .s-plan { background: var(--zk-navy); color: var(--zk-white); }
 .air { position: absolute; left: 900px; top: 0; width: 1020px; height: 1080px; fill: var(--zk-white); }
 .h1--plan { font-size: 80px; }
-.now-tag { position: absolute; right: 60px; top: 66px; font-size: 22px; padding: 16px 28px; }
-.track {
-  position: absolute; left: 108px; top: 366px; width: 1380px; height: 2px;
-  background: linear-gradient(90deg, var(--zk-white) 0 66.7%, transparent 66.7%),
-              repeating-linear-gradient(90deg, rgba(255,255,255,.45) 0 10px, transparent 10px 20px);
-}
-.stages { position: absolute; left: 60px; top: 318px; width: 1800px; height: 700px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 40px; }
-.stage { display: flex; flex-direction: column; align-items: flex-start; gap: 22px; min-width: 0; }
-.stage-head { display: flex; align-items: center; gap: 16px; position: relative; }
-.num { width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center; font: 700 34px/1 var(--f-wide); }
-.state { font-size: 18px; padding: 10px 18px; }
-.stage-title { font-size: 34px; padding: 18px 30px; }
-.tasks { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; flex: 1; }
-.task { font: 400 22px/1.2 var(--f-text); padding: 12px 22px; white-space: normal; text-align: left; color: var(--zk-white); border-color: rgba(255,255,255,.4); }
-.say { margin: 0; min-height: 132px; padding: 22px 28px; border-radius: 32px; font: 400 22px/1.32 var(--f-text); background: #232D7B; color: rgba(255,255,255,.88); }
-.is-done .num { background: var(--zk-white); color: var(--zk-navy); }
-.is-done .state { background: #2C3684; color: var(--zk-white); }
-.is-done .stage-title { background: var(--zk-white); color: var(--zk-navy); }
-.is-now .num { background: var(--g); color: var(--zk-white); box-shadow: 0 0 0 10px rgba(44,213,196,.22); }
-.is-now .state { background: var(--zk-white); color: var(--zk-navy); }
-.is-now .stage-title { background: var(--g) padding-box; color: var(--zk-white); }
-.is-now .task { background: linear-gradient(var(--zk-navy), var(--zk-navy)) padding-box, var(--g) border-box; border-color: transparent; }
-.is-now .say { background: var(--zk-white); color: var(--zk-navy); }
-.is-next .num { background: var(--zk-navy); border: 2px solid rgba(255,255,255,.6); color: var(--zk-white); }
-.is-next .state { background: var(--zk-navy); border-color: rgba(255,255,255,.45); color: rgba(255,255,255,.85); }
-.is-next .stage-title { border-color: var(--zk-white); color: var(--zk-white); }
+.cards { position: absolute; left: 60px; top: 356px; width: 1800px; height: 654px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+.card { background: var(--zk-white); color: var(--zk-navy); padding: 32px; display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+.card.is-now { background: var(--hero-blue); color: var(--zk-white); }
+.card-no { font: 700 44px/1.1 var(--f-wide); }
+.card-title { margin: 0; min-height: 2.24em; font: 700 39px/1.12 var(--f-wide); }
+.steps { display: flex; flex-direction: column; gap: 10px; }
+.step { width: 100%; height: 50px; padding: 0 16px; font: 400 20px/1 var(--f-text); border-color: var(--zk-navy); color: var(--zk-navy); }
+.is-now .step { border-color: var(--zk-white); color: var(--zk-white); }
+.result { margin-top: auto; padding-top: 18px; border-top: 1.5px solid rgba(21, 31, 109, .16); display: grid; gap: 10px; }
+.is-now .result { border-top-color: rgba(255, 255, 255, .5); }
+.result-label { font: 700 14px/1 var(--f-wide); letter-spacing: .08em; text-transform: uppercase; opacity: .55; }
+.is-now .result-label { opacity: .8; }
+.result p { margin: 0; min-height: 3.9em; font: 400 22px/1.3 var(--f-text); }
 
 /* ---------- слайд 14 · четыре направления ---------- */
-.dirs { position: absolute; left: 60px; top: 296px; width: 1800px; display: flex; flex-direction: column; gap: 26px; }
-.dir { display: grid; grid-template-columns: 470px 1fr; gap: 34px; align-items: center; }
-.dir-pill { justify-content: flex-start; gap: 22px; padding: 14px 40px 14px 14px; min-height: 132px; white-space: normal; background: var(--g) padding-box; color: var(--zk-white); }
-.dir-pill .dot { width: 104px; height: 104px; }
+.dirs { position: absolute; left: 60px; top: 300px; width: 1800px; display: flex; flex-direction: column; gap: 24px; }
+.dir { display: grid; grid-template-columns: 450px 1fr; gap: 32px; align-items: center; }
+.dir-pill { justify-content: flex-start; gap: 20px; padding: 12px 36px 12px 12px; min-height: 120px; white-space: normal; background: var(--c); color: var(--zk-white); }
+.dir-pill .dot { width: 96px; height: 96px; }
 .dir-txt { display: flex; flex-direction: column; gap: 6px; }
-.dir-txt b { font: 700 32px/1.05 var(--f-wide); }
-.dir-txt small { font: 400 18px/1.22 var(--f-text); opacity: .92; }
-.themes { display: flex; flex-wrap: wrap; gap: 10px; }
-.theme { font: 400 20px/1 var(--f-text); padding: 5px 22px 5px 5px; height: 56px; background: linear-gradient(var(--zk-white), var(--zk-white)) padding-box, var(--g) border-box; color: var(--zk-navy); }
-.theme .dot { width: 42px; height: 42px; }
-.theme .ic { width: 70%; height: 70%; }
+.dir-txt b { font: 700 30px/1.05 var(--f-wide); }
+.dir-txt small { font: 400 17px/1.22 var(--f-text); opacity: .92; }
+.chips { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* ---------- слайды 15–18 · иконки по направлениям ---------- */
-.group { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: grid; grid-template-columns: 600px 1fr; gap: 36px; }
-.hero { position: relative; overflow: hidden; border-radius: 48px; background: var(--g); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 32px; }
-.hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--zk-white); opacity: .16; }
+.group { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: grid; grid-template-columns: 480px 1fr; gap: 36px; }
+.hero { position: relative; overflow: hidden; border-radius: 48px; background: var(--hero); display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 40px 28px; }
+.hero-flow { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--zk-white); opacity: .14; }
 .hero-tag, .hero-name, .hero-dot { position: relative; }
-.hero-tag { font-size: 24px; padding: 14px 28px; }
-.hero-name { font-size: 30px; padding: 16px 34px; }
-.hero-dot { width: 340px; height: 340px; box-shadow: 0 30px 60px rgba(14, 18, 60, .22); }
-.rows { display: grid; grid-template-rows: 1fr 1fr; gap: 22px; min-width: 0; }
-.row { display: flex; justify-content: center; align-items: center; gap: 6px; padding: 16px; border-radius: 48px; min-width: 0; }
-.row--color { background: var(--g); }
-.tile { flex: 0 0 calc((100% - (var(--cols) - 1) * 6px) / var(--cols)); display: flex; flex-direction: column; align-items: center; gap: 16px; min-width: 0; }
+.hero-tag { background: var(--zk-white); color: var(--zk-navy); padding: 14px 28px; }
+.hero-name { border-color: var(--zk-white); color: var(--zk-white); font: 400 22px/1 var(--f-text); padding: 14px 26px; }
+.hero-dot .dot { width: 300px; height: 300px; box-shadow: 0 10px 28px rgba(14, 18, 60, .1); }
+.grid { display: flex; flex-direction: column; justify-content: space-evenly; min-width: 0; }
+.grid-row { display: flex; justify-content: center; gap: 16px; }
+.tile { flex: 0 0 calc((100% - (var(--cols) - 1) * 16px) / var(--cols)); display: flex; flex-direction: column; align-items: center; gap: 12px; min-width: 0; }
 .tile .dot { width: var(--d); height: var(--d); }
-.tile-name { font: 400 var(--fs)/1.2 var(--f-text); padding: var(--tp); white-space: normal; text-align: center; max-width: 100%; }
 
-/* ---------- слайд 19 · все иконки ---------- */
-.legend { position: absolute; left: 60px; top: 272px; display: flex; gap: 14px; }
-.lg { font-size: 22px; padding: 8px 8px 8px 24px; }
+/* ---------- слайд 17а · иконки по фотографиям ---------- */
+.pairs { position: absolute; left: 60px; top: 338px; width: 1800px; height: 674px; display: flex; flex-direction: column; justify-content: space-evenly; }
+.pair-row { display: flex; justify-content: center; gap: 40px; }
+.pair { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.pair-media { display: flex; align-items: center; gap: 12px; }
+.photo { width: 180px; height: 180px; border-radius: 40px; background: #EEF5F0; border: 2px dashed rgba(0, 132, 61, .35); color: rgba(0, 132, 61, .7); display: grid; place-content: center; justify-items: center; gap: 6px; font: 400 16px/1 var(--f-text); }
+.photo svg { width: 44px; height: 44px; fill: currentColor; }
+.arrow { width: 40px; height: 20px; fill: none; stroke: var(--c); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.pair .dot { width: 150px; height: 150px; }
+
+/* ---------- слайд 19 · все иконки, без кружков ---------- */
+.legend { position: absolute; left: 60px; top: 274px; display: flex; gap: 14px; }
+.lg { background: var(--c); color: var(--zk-white); font-size: 22px; padding: 8px 8px 8px 24px; }
 .lg i { font: 700 18px/1 var(--f-wide); font-style: normal; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--zk-white); color: var(--zk-navy); }
-.all { position: absolute; left: 60px; top: 356px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 16px 0; justify-items: center; }
-.all .dot { width: 150px; height: 150px; }
-
-@media (prefers-reduced-motion: no-preference) {
-  .frame { transition: box-shadow .2s ease; }
-}
+.all { position: absolute; left: 60px; top: 352px; width: 1800px; display: grid; grid-template-columns: repeat(9, 1fr); gap: 10px 0; justify-items: center; }
+.all .ic { width: 156px; height: 156px; }
 </style>
 
 <div class="wrap">
   <header class="intro">
-    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma</p>
+    <p class="eyebrow">Заводоуковск · 3 этап · макет для переноса в Figma · версия 2</p>
     <h1>План работы и иконки в бабблах</h1>
-    <p>Слайды 2, 14, 15–18 и 19 из страницы «3_этап_Заводоуковск_ребрендинг 2», пересобранные на фирменных бабблах. Иконки, логотип и графика воздушных потоков — векторы из вашего Figma-файла, размеры слайдов 1920×1080, как в презентации.</p>
+    <p>Слайды 2, 14–19 из страницы «3_этап_Заводоуковск_ребрендинг 2» с правками: план работы вернулся к четырём карточкам, бабблы стали одноцветными, у направлений появились главные иконки, на последнем слайде иконки без кружков. Добавлен слайд 17а с иконками туризма, нарисованными по фотографиям.</p>
     <ul class="checks">
+      <li>Главные иконки «Инвестиций» и «Молодёжи» временные: варианты Money и Award из набора Icons. Для «Туризма» стоит заглушка, пока иконка рисуется.</li>
+      <li>На слайде 17а вместо фотографий стоят рамки: в файле не нашлось исходных снимков для этих иконок. Фото вставляются при переносе в Figma.</li>
       <li>Шрифт Actay подхватывается, если он установлен на компьютере (в Chrome). Иначе страница показывает Montserrat: по ширине строки он почти совпадает с Actay.</li>
-      <li>Мастер-иконка «Спорт» в Figma битая, здесь вместо неё гантель из варианта «Sport».</li>
-      <li>В наборе есть две пары одинаковых иконок: «Сельское хозяйство» и «Площадка для роста», «Поддержка инициатив» и «Волонтёры».</li>
-      <li>В плане работы написано «Набор иконок · 30 шт.», а в системе иконок 36. Текст плана оставлен как в презентации.</li>
+      <li>Мастер-иконка «Спорт» в Figma битая, здесь вместо неё гантель из варианта «Sport». Пары одинаковых иконок: «Сельское хозяйство» и «Площадка для роста», «Поддержка инициатив» и «Волонтёры».</li>
     </ul>
   </header>
   <main class="deck">
