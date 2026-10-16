@@ -374,38 +374,36 @@ Hard constraints: no text, no letters, no logos, no print on any card, no waterm
 
 ### Н13 · Бейдж и лента · слайд 51 · ПРИОРИТЕТ
 
-- **Статус:** перегенерировать, новая композиция.
-- **Что было не так:** голова обрезана по подбородок, бейдж мелкий и теряется на рубашке, нет ощущения форума.
+- **Статус:** перегенерировать, промпты сокращены.
+- **Что было не так:** подробный промпт давал большую сцену с толпой. Теперь в кадре только бейдж крупным планом: на человеке или на белом кубе.
 - **Пустые поверхности:** вертикальная карточка бейджа 1 : 1,57, белая; лента однотонная тёмно-синяя (#151F6D) без печати.
 
-**Вариант A — участник форума в фойе, бейдж крупно и в фокусе**
+**Вариант A — человек стоит, бейдж крупным планом**
 
 ```text
-A photorealistic photograph of a participant at the investment forum in the bright foyer of the Palace of Culture in Zavodoukovsk, a small town in Tyumen Oblast, Western Siberia, Russia, on a summer day.
+A photorealistic close-up mockup photo of a blank badge on a person.
 
-Person: a friendly Russian man of about 40 with short dark-blond hair and a light stubble, wearing an open dark-navy suit jacket over a light-gray knit polo, smiling naturally and looking slightly off camera to the left, as if greeting a colleague. His face is visible but positioned at the top right of the frame.
+A man stands facing the camera. The frame shows only his chest, from the shoulders to the waist; his face is outside the frame. He wears a dark navy suit jacket over a light-gray shirt.
 
-Object: a badge on a plain deep navy-blue (#151F6D) satin lanyard, 2 cm wide, with a small silver clip. The badge is a rigid vertical PVC card with rounded corners and a punched slot at the top, proportion 1:1.57, completely blank matte white. It hangs straight at mid-chest, facing the camera squarely, not twisted, fully visible, against the dark jacket for contrast.
+In the center of his chest hangs a badge on a plain deep navy lanyard (#151F6D): a rigid matte white card with rounded corners, vertical, proportion 1:1.57, completely blank. It faces the camera straight, flat, not twisted, and fills about 40% of the frame height.
 
-Composition: close medium shot from the top of the head down to the waist, the person in the right half of the frame, the badge right of center, occupying about 30% of the frame height and in sharp focus. Left part of the frame: the foyer, softly blurred, with a registration desk, a few attendees with coffee cups, and a tall window with pines and birches outside.
-Light: soft bright daylight from the window on the left, gentle fill, no glare on the card.
-Camera: 85 mm lens, f/3.5, the badge and face sharp, background in creamy blur, natural skin texture.
+Background: a plain light-gray wall, softly out of focus. Soft even daylight, no glare on the card. 85 mm lens, f/4, the badge tack-sharp.
 
-Hard constraints: no text, no letters, no logos, no print on the card or lanyard, no watermark anywhere. Landscape 16:9, 1920×1080.
+Only one person. No other people, no text, no logos, no print on the badge or lanyard. Landscape 16:9, 1920×1080.
 ```
 
-**Вариант B — бейдж в руках крупным планом у стойки регистрации**
+**Вариант B — бейдж лежит на белом кубе**
 
 ```text
-A photorealistic close-up photograph at the registration desk of the investment forum in the foyer of the Palace of Culture in Zavodoukovsk, a small town in Tyumen Oblast, Western Siberia, Russia.
+A photorealistic studio mockup photo of a blank badge lying on a white cube.
 
-Object: two hands of a participant in a navy suit sleeve and white shirt cuff hold a badge out toward the camera at chest height, thumbs on the lower corners only. The badge is a rigid vertical PVC card with rounded corners and a punched slot at the top, proportion 1:1.57, completely blank matte white, perfectly flat, facing the camera squarely. A plain deep navy-blue (#151F6D) satin lanyard, 2 cm wide, with a silver clip, runs from the slot and drapes in a soft loop over the hands.
+A rigid matte white badge card with rounded corners and a punched slot at the top, vertical, proportion 1:1.57, completely blank, lies flat on top of a matte white cube podium. A plain deep navy lanyard (#151F6D) with a small silver clip is attached to the slot and drapes loosely over the edge of the cube.
 
-Composition: the badge in the center of the frame, occupying about 45% of the frame height, tack-sharp. Behind, heavily blurred: the registration desk with a stack of white folders, a volunteer in a white shirt, and a large window with green pines.
-Light: soft daylight from a large window on the right, gentle highlight on the lanyard's satin, no glare on the card.
-Camera: 100 mm lens, f/2.8, shallow depth of field.
+Background: a seamless light warm-gray studio backdrop with a smaller white cube behind, out of focus. Soft diffused light from the upper left, gentle natural shadows.
 
-Hard constraints: no text, no letters, no logos, no print on the card or lanyard, no watermark anywhere. Landscape 16:9, 1920×1080.
+Camera about 35° above the cube. The badge is in the center, fully visible, sharp, about 40% of the frame height.
+
+No people, no text, no logos, no print on the badge or lanyard. Landscape 16:9, 1920×1080.
 ```
 
 ### Н20 · Путеводитель инвестора А5 · слайд 51
