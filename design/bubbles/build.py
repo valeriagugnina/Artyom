@@ -138,10 +138,12 @@ def logo(variant):
             '<use href="#logo"/></svg>')
 
 
-def head(title, sub=None):
+def head(title, sub=None, count=None):
     parts = [logo("c"), f'<h2 class="h1">{escape(title)}</h2>']
     if sub:
         parts.append(f'<p class="sub">{escape(sub)}</p>')
+    if count:
+        parts.append(f'<p class="count"><b>{count}</b><span>иконок</span></p>')
     return "".join(parts)
 
 
@@ -198,26 +200,17 @@ def slide_dirs():
 
 
 # ---------- Слайды 15–18 · Иконки по направлениям: плитка ----------
-# колонки × ряды; свободные ячейки занимают информационные плитки, чтобы сетка была полной
+# колонки × ряды; лишние ячейки в конце сетки остаются пустыми
 GRIDS = {"main": (4, 2), "inv": (3, 2), "tour": (5, 3), "youth": (5, 2)}
-
-
-def info_tiles(d, free):
-    tiles = [f'<li class="tile tile--info"><b>{len(d["icons"])}</b><span>иконок в направлении</span></li>']
-    if d["key"] == "tour":
-        tiles.append(f'<li class="tile tile--info"><b>{len(PHOTO_BASED)}</b>'
-                     '<span>иконок нарисованы по фотографиям</span></li>')
-    return tiles[:free]
 
 
 def slide_group(d):
     cols, rows = GRIDS[d["key"]]
     tiles = [f'<li class="tile">{icon(n, "ic-" + d["key"])}<span class="b chip chip--label">{escape(n)}</span></li>'
              for n in d["icons"]]
-    tiles += info_tiles(d, cols * rows - len(tiles))
     return (
         f'<div class="slide s-group d-{d["key"]}">'
-        + head(d["name"], d["sub"])
+        + head(d["name"], d["sub"], len(d["icons"]))
         + '<div class="group"><div class="hero">'
         '<svg class="hero-flow" viewBox="0 0 632 674" preserveAspectRatio="xMidYMid slice" aria-hidden="true">'
         '<use href="#flow"/></svg>'
@@ -242,10 +235,9 @@ def slide_photos():
                 'a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5Z"/></svg><span>фото</span></div>'
                 f'<div class="dip-icon">{pic}</div></div>'
                 f'<span class="b chip chip--label">{escape(name)}</span></li>')
-    intro = (f'<li class="pcell"><div class="pintro"><b>{len(PHOTO_BASED)}</b>'
-             '<span>иконок туризма нарисованы по фотографиям реальных мест и традиций Заводоуковска</span></div></li>')
-    cells = intro + "".join(pair(n) for n in PHOTO_BASED)
-    return ('<div class="slide s-photos d-tour">' + head("Иконки по фотографиям", "Туризм и имидж города")
+    cells = "".join(pair(n) for n in PHOTO_BASED)
+    return ('<div class="slide s-photos d-tour">'
+            + head("Иконки по фотографиям", "Туризм и имидж города", len(PHOTO_BASED))
             + f'<ul class="pcells">{cells}</ul></div>')
 
 
