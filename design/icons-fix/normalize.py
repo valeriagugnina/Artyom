@@ -21,18 +21,20 @@ SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
 REBUILT = {   # узел → функция новой версии
     "4254:1269": I.investments5,
     "4254:3107": I.tourism2, "2888:570": I.logistics_route3,
-    "2892:607": I.central_park5, "2888:583": I.construction_plain,
-    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church4,
-    "2891:614": I.hotel2, "2888:632": I.coworking2, "2888:612": I.rocket3, "2892:626": I.kite,
-    "4254:3191": I.scales, "2891:591": I.glider_b, "4254:3005": I.truck_solid2, "2888:639": I.mentors3,
-    "2888:616": I.career2, "2888:643": I.initiatives3, "4254:3105": I.mutual_help, "4254:3189": I.sun3,
-    "4254:1272": I.capital,
+    "2892:607": I.central_park6, "2888:583": I.construction_top,
+    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church5,
+    "2891:614": I.hotel2, "2888:612": I.rocket3, "2892:626": I.kite,
+    "4254:3191": I.scales, "2891:591": I.glider_b, "4254:3005": I.truck_solid2, "2888:639": I.mentors4,
+    "2888:616": I.career3, "2888:643": I.initiatives4, "4254:3105": I.mutual_help2, "4254:3189": I.sun4,
+    "4254:1272": I.capital_orig, "2891:599": I.sanatorium2, "2892:612": I.park_gate, "2892:571": I.comfort_city2, "4254:3023": I.combine2, "2891:608": I.rest_base2,
 }
 SAME_AS = {"4254:3105": "2888:643"}   # ладонь с сердцем ставится в кадр так же, как ладонь с лампочкой
-WIDTH_AS = {"2888:632": "2888:616"}   # монитор шириной с портфель
-NEW = [("new:farm", "Ферма", I.farm3)]                     # новые иконки — компонентов в Фигме ещё нет
+WIDTH_AS = {}   # (монитор вернулся к исходнику)
+NEW = [("new:farm", "Ферма", I.farm4)]                     # новые иконки — компонентов в Фигме ещё нет
 FILL = {"2891:591"}        # планёр по диагонали: вписать по большей стороне в 42, по центру
 TALL_FIT = {"2888:612"}    # ракета: во всю высоту 4…43,1, по центру, низ на базе
+TOP_FIT = {"2888:643": 5.0,   # ладонь с лампочкой: ладонь в ширину кадра, лучи могут подняться до 5
+           "new:farm": TOP}      # ферма: поля во всю ширину 4…46
 LEFT_CUT = set()    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
 RENAME = {"4254:3193": "Участие",                     # две ладошки — это «Участие»
           "2888:677": "Участие · старый вариант"}
@@ -41,6 +43,7 @@ FLOAT = {"2888:570", "2888:612", "2888:620", "2888:660", "2888:665", "2888:673",
          "2891:586", "2891:591", "2892:626", "4254:3019", "4254:3086", "4254:3110", "4254:3189",
          "4254:3193", "4254:3107"}
 ROUND = {"2888:620", "2891:586", "4254:3019", "4254:3110", "4254:3189"}
+POINTY = {"2892:612", "2892:571", "2892:596", "2891:608", "2892:580", "2888:591", "2891:595", "2892:607", "2888:583"}   # острые и круглые верхушки
 FULL = {"4254:1269": None,                              # Ф1: полосы срезаны рамкой — как построено
         "4254:3034": (TOP, BASE)}                       # Ф2: полосы сверху по направляющей 7, ноги на базе
 
@@ -74,25 +77,32 @@ def place(node, p):
     if node in FILL:
         s = (RIGHT - LEFT) / max(w, h)
         return s, 25 - s * (x0 + x1) / 2, 25 - s * (y0 + y1) / 2, "вписан по большей стороне"
+    if node in TOP_FIT:
+        s = min((BASE - TOP_FIT[node]) / h, (RIGHT - LEFT) / w)
+        return s, 25 - s * (x0 + x1) / 2, BASE - s * y1, "в ширину кадра"
     if node in TALL_FIT:
         s = min(39.1 / h, (RIGHT - LEFT) / w)
         return s, 25 - s * (x0 + x1) / 2, BASE - s * y1, "во всю высоту поля"
     if node in LEFT_CUT:
         s = min(39.1 / h, (RIGHT - LEFT) / w)
         return s, LEFT - s * x0, BASE - s * y1, "срез по левой направляющей"
-    f = ink_ratio(p)
-    area = A_TARGET * (F_REF / f) ** 0.25
-    if node in ROUND: area *= 1.10
-    s = math.sqrt(area / (w * h))
-    hmax = 38.0 if node in ROUND else (39.1 if h / w >= 1.3 and node not in FLOAT else BASE - TOP)
-    s = min(s, (RIGHT - LEFT) / w, hmax / h)
+    # вписать в квадрат поля: иконка касается полей 4/46 или верха 7 и базы 43,1 —
+    # смотря что наступит раньше. Оптика: круглые формы — в квадрат 6…44, острые и
+    # полукруглые верхушки — на 1 выше верхней линии, узкие высокие — до верха 4.
+    if node in ROUND: W, H = 38.0, 38.0
+    else:
+        W, H = RIGHT - LEFT, BASE - TOP
+        if node in POINTY: H += 1.0
+        if h / w >= 1.5 and node not in FLOAT: H = 39.1
+    s = min(W / w, H / h)
     dx = 25 - s * (x0 + x1) / 2
-    if node in FLOAT: dy = (TOP + BASE) / 2 - s * (y0 + y1) / 2
+    if node in FLOAT or node in ROUND: dy = (TOP + BASE) / 2 - s * (y0 + y1) / 2
     else: dy = BASE - s * y1
-    return s, dx, dy, f"плотность {f:.2f}"
+    fw, fh = s * w / W, s * h / H
+    return s, dx, dy, ("по ширине" if fw > fh else "по высоте") + (" · оптика" if node in POINTY | ROUND else "")
 
 VARIANTS = {   # узел → дополнительные варианты для страницы (в пак не идут)
-
+    "2892:607": [("park-oval", lambda: I.central_park6(kind="oval", cy=15.5), None)],
 }
 
 def variant_place(node, mode, p):
