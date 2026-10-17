@@ -336,6 +336,10 @@ def construction(right=42.0, gap=1.6, halo=1.2, windows=True):
     wins = [rect2(bx0 + m + c * (ww + m), y0 + gy + r * (wh + gy), bx0 + m + c * (ww + m) + ww, y0 + gy + r * (wh + gy) + wh)
             for c in range(2) for r in range(3)]
     if windows == "top": wins = wins[0::3]                # только верхний ряд: два окна
+    if windows == "top2":                                 # два ряда пониже — оба выше крыши маленького дома (≈30.4)
+        wh2, r0, gap2 = 2.4, y0 + 1.7, 1.7
+        wins = [rect2(bx0 + m + c * (ww + m), r0 + r * (wh2 + gap2), bx0 + m + c * (ww + m) + ww, r0 + r * (wh2 + gap2) + wh2)
+                for c in range(2) for r in range(2)]
     house_big = union(slab, diff(body, *wins) if windows else body)
     # ── домик: строго симметричный, скаты одного уклона, «галочка» кровли той же толщины
     hx0, hx1, eave, hap = 12.4, 23.6, 37.6, 34.0
@@ -728,6 +732,10 @@ def construction_top():
     """У большого дома вернулись два окна в верхнем ряду."""
     return construction(windows="top")
 
+def construction_top2():
+    """У большого дома четыре окна в два ряда, ниже по высоте; все выше крыши маленького дома."""
+    return construction(windows="top2")
+
 def hotel():
     """Дверь — один проём шириной с окна, без тонкой перемычки посередине."""
     import re
@@ -789,7 +797,7 @@ def truck_slanted(k=0.30, gap=1.6, n=3, x0=7.6, x1=29.0):
     wheels = union(w1, w2)
     return union(diff(union(*blocks, cab), dilate(wheels, 0.75)), wheels)
 
-def scales():
+def scales(top=13.0, inward=0.0, pan_in=0.0):
     """Весы геометрично: прямая балка без навершия, прямая стойка, основание-полуовал,
     одинаковые чаши на треугольных подвесах; всё симметрично."""
     k = 0.5523
@@ -801,15 +809,15 @@ def scales():
         p = Path(); p.moveTo(cx - rx, cy)
         p.cubicTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry)
         p.cubicTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy); p.close(); return p
-    beam = rect2(8.6, 13.0, 41.4, 15.6)
-    post = rect2(23.7, 15.5, 26.3, 38.0)
+    beam = rect2(8.6 + inward, top, 41.4 - inward, top + 2.6)
+    post = rect2(23.7, top + 2.5, 26.3, 38.0)
     base = dome(25.0, BASE, 9.5, 5.8)
     parts = [beam, post, base]
-    for xc in (11.5, 38.5):
-        rim, half, t = 30.6, 6.9, 1.7
-        tri = [(xc, 15.5), (xc + half, rim), (xc - half, rim)]
-        parts += [diff(poly(*tri), poly(*inset(tri, t))), half_ellipse(xc, rim, 7.3, 5.4),
-                  rect2(xc - 7.3, rim - 0.01, xc + 7.3, rim + 0.4)]
+    for xc in (11.5 + inward, 38.5 - inward):
+        rim, half, t = 30.6, 6.9 - pan_in, 1.7
+        tri = [(xc, top + 2.5), (xc + half, rim), (xc - half, rim)]
+        parts += [diff(poly(*tri), poly(*inset(tri, t))), half_ellipse(xc, rim, 7.3 - pan_in, 5.4),
+                  rect2(xc - 7.3 + pan_in, rim - 0.01, xc + 7.3 - pan_in, rim + 0.4)]
     return union(*parts)
 
 def glider(span=40.0, angle=45.0, cx=25.0, cy=25.05, ratio=1.55, k=1.3):
@@ -1374,7 +1382,7 @@ def farm2(w=3.4, gap=1.6):
     barn = diff(barn, rect2(21.5, 19.0, 28.5, 30.1))
     return union(diff(barn, dilate(fields, gap)), fields)
 
-def church5(side_k=1.15, slit=0.7, base_extra=1.5):
+def church5(side_k=1.15, slit=0.7, base_extra=1.5, no_eaves=True):
     """Прежний облик храма: карниз с выступами, свод, белая «галочка» над входом.
     Каждая маковка слита со своим барабаном и отделена от кровли ровной прорезью slit;
     у центральной прорезь идёт по дуге свода. Боковые маковки крупнее в side_k раз."""
@@ -1383,6 +1391,8 @@ def church5(side_k=1.15, slit=0.7, base_extra=1.5):
     main = P(ds[0]); main.fillType = pathops.FillType.EVEN_ODD; main = union(main, Path())
     main = diff(main, rect2(15.6, 27.5, 18.69, 28.70), rect2(31.30, 27.5, 34.4, 28.70))   # ступеньки кровли
     main = union(main, rect2(18.69, 27.9, 31.30, 28.75), rect2(7.13, 30.1, 42.89, 31.2))  # свод на карнизе, карниз со стенами
+    if no_eaves:                                                   # линия кровли — одна прямая без ступенек
+        main = union(diff(main, rect2(0, 26.0, 7.13, 32.0), rect2(42.89, 26.0, 50, 32.0)), rect2(7.13, 27.9, 42.89, 30.2))
     domes = []
     for onion, drum, (x0, x1) in ((3, 2, (10.34, 14.88)), (4, 1, (35.07, 39.63))):
         d = union(P(ds[onion]), P(ds[drum]), rect2(x0, 25.4, x1, 26.7))
@@ -1390,6 +1400,8 @@ def church5(side_k=1.15, slit=0.7, base_extra=1.5):
         domes.append(tf(d, (side_k, 0, 0, side_k, cx - side_k * cx, 28.31 - side_k * 28.31)))
     domes.append(union(P(ds[6]), P(ds[5]), rect2(21.63, 20.9, 28.34, 26.4)))
     out = union(main, *[diff(d, dilate(main, slit)) for d in domes])
+    if no_eaves:                         # без крошечных выступов карниза слева и справа
+        out = diff(out, rect2(0, 26.0, 7.13, 32.0), rect2(42.89, 26.0, 50, 32.0))
     if base_extra:                       # выше за счёт стен: окна и дверь вытягиваются, галочка на месте
         y = 39.0
         upper = inter(out, rect2(0, 0, 50, y)); lower = move(inter(out, rect2(0, y, 50, 50)), 0, base_extra)
@@ -1439,12 +1451,13 @@ CROWNS = {
              (-0.55, 0.30, 0.45), (0.55, 0.30, 0.45)], (0.72, 0.72)),
 }
 
-def cloud_crown(cx, cy, u, kind="cloud"):
+def cloud_crown(cx, cy, u, kind="cloud", sy=1.0):
     """Крона «облаком», как у деревьев в остальном паке: лепестки по контуру,
-    середина залита — без глубоких выемок-«треф». u — полуширина кроны."""
+    середина залита — без глубоких выемок-«треф». u — полуширина кроны;
+    sy < 1 — крона приплюснута по вертикали (как у сосен)."""
     lobes, (rx, ry) = CROWNS[kind]
-    parts = [circle(cx + x * u, cy + y * u, r * u) for x, y, r in lobes]
-    parts.append(ellipse(cx, cy, rx * u, ry * u))
+    parts = [ellipse(cx + x * u, cy + y * u * sy, r * u, r * u * sy) for x, y, r in lobes]
+    parts.append(ellipse(cx, cy, rx * u, ry * u * sy))
     return union(*parts)
 
 def oval_crown(cx, cy, u):
@@ -1453,7 +1466,7 @@ def oval_crown(cx, cy, u):
                  ellipse(cx - 0.45 * u, cy + 0.15 * u, 0.55 * u, 0.7 * u),
                  ellipse(cx + 0.45 * u, cy + 0.15 * u, 0.55 * u, 0.7 * u))
 
-def central_park6(halo=0.7, u=6.95, cy=16.3, tw=1.88, kind="cloud"):
+def central_park6(halo=0.7, u=6.95, cy=13.4, tw=1.88, kind="cloud", sy=0.72):
     """Два одинаковых дерева с кроной-облаком, стоят симметрично (2-й и 4-й столбы
     исходника были сдвинуты несимметрично — стволы выровнены по оси ротонды)."""
     import re
@@ -1469,7 +1482,7 @@ def central_park6(halo=0.7, u=6.95, cy=16.3, tw=1.88, kind="cloud"):
         sgn = -1 if cx < 25 else 1
         corner = rect2(min(cx, cx + sgn * 1.2), 29.3, max(cx, cx + sgn * 1.2), 30.5)
         pav = diff(pav, diff(corner, circle(cx, 29.35, 1.0)))
-    crown = (lambda x: oval_crown(x, cy, u)) if kind == "oval" else (lambda x: cloud_crown(x, cy, u, kind))
+    crown = (lambda x: oval_crown(x, cy, u)) if kind == "oval" else (lambda x: cloud_crown(x, cy, u, kind, sy))
     trees = union(*[union(crown(x), rect2(x - tw / 2, cy, x + tw / 2, BASE)) for x in xs])
     trees = diff(trees, dilate(pav, halo, join="miter"))
     return union(pav, trees)
@@ -1653,6 +1666,201 @@ def comfort_city2(g=0.9, heart=True):
         hrt = heart_shape(40.4, 13.4, 9.0)
         house = union(diff(house, dilate(hrt, 1.3)), hrt)
     return house
+
+def park_columns(g=1.3, inset=1.5, W=15.16, slab=2.84, cham=1.4):
+    """Вход в парк Машиностроителей — исходные две колонны, но плотнее: просветы между
+    деталями g вместо 1.9, верхняя плита — со скосами снизу (треугольный срез) вместо
+    ступеньки, колонны на inset ближе друг к другу."""
+    out = []
+    for x0 in (4.16 + inset, 30.69 - inset):
+        x1 = x0 + W; m = 0.95
+        y = BASE
+        plinth = rect2(x0, y - 3.79, x1, y); y -= 3.79 + g
+        bw = (W - 2 * m - g) / 2                                     # два блока базы и капители
+        blocks = lambda yb, yt: [rect2(x0 + m, yt, x0 + m + bw, yb), rect2(x1 - m - bw, yt, x1 - m, yb)]
+        base = blocks(y, y - 1.9); y -= 1.9 + g
+        top_slab_top = 8.76
+        cap_b = top_slab_top + slab + g + 1.9                         # низ блоков капители
+        sw = 4.4                                                      # стволы — по центрам блоков
+        cs = (x0 + m + bw / 2, x1 - m - bw / 2)
+        shafts = [rect2(c - sw / 2, cap_b + g, c + sw / 2, y) for c in cs]
+        cap = blocks(cap_b, cap_b - 1.9)
+        sb = top_slab_top + slab
+        top = poly((x0, top_slab_top), (x1, top_slab_top), (x1, sb - cham), (x1 - cham, sb), (x0 + cham, sb), (x0, sb - cham))
+        out += [plinth, *base, *shafts, *cap, top]
+    return union(*out)
+
+def combine3(g=1.34):
+    """Комбайн: колёса, кабина, корпус и бункер разделены просветами как у трактора (g);
+    жатка — исходная: пятиугольник с прорезью, «палец» подающей камеры в нём и ковш внизу,
+    со своими исходными зазорами (при g палец и нижняя полка жатки превращаются в щепки)."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3023"]["svg"])
+    wheels = union(P(ds[0]), P(ds[1]))
+    cab = P(ds[2]); cab.fillType = pathops.FillType.EVEN_ODD; cab = union(cab, Path())
+    header = P(ds[3])
+    body, tank = P(ds[4]), P(ds[5])
+    cab = diff(cab, dilate(wheels, g))
+    front = union(wheels, cab, header); out = [wheels, cab, header]
+    for part in (body, tank):
+        part = drop_small(diff(part, dilate(front, g)), 0.8)
+        if part is tank:                                  # верхний правый угол бункера — ровный, без крючка
+            part = diff(part, inter(rect2(22.5, 13.0, 26.0, 17.0), diff(part, opening(part, 1.0))))
+        out.append(part); front = union(front, part)
+    return union(*out)
+
+def tractor2(g=1.3):
+    """Трактор: колёса — ровные круги на прежних центрах; подкрылки — дуги ровно на
+    просвете g от колеса, без ступеньки у левого края и крючка у правого."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3026"]["svg"])
+    body = P(ds[2]); body.fillType = pathops.FillType.EVEN_ODD; body = union(body, Path())
+    c1, r1 = (13.24, 36.13), 7.83
+    c2, r2 = (39.13, 38.43), 5.47
+    fill1 = inter(circle(*c1, r1 + g + 0.6), rect2(6.14, 26.0, 22.6, 38.11))
+    fill2 = inter(circle(*c2, r2 + g + 0.6), rect2(32.0, 30.0, 44.39, 38.11))
+    body = diff(union(body, fill1, fill2), dilate(circle(*c1, r1), g), dilate(circle(*c2, r2), g))
+    return union(body, circle(*c1, r1), circle(*c2, r2))
+
+def sanatorium3():
+    """Санаторий без елей: только здание (прямые стены на базе, как в круге 7)."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2891:599"]["svg"])
+    top = P(ds[3])
+    pediment = inter(P(ds[2]), rect2(0, 0, 50, 21.75))
+    walls = rect2(12.0, 21.7, 38.05, BASE)
+    plinth = rect2(10.87, 41.9, 39.19, BASE)
+    holes = [rect2(15.4, 31.98, 20.41, 36.89), rect2(29.67, 31.98, 34.64, 36.89),
+             rect2(15.4, 24.04, 20.56, 29.1), rect2(29.52, 24.04, 34.59, 29.1),
+             rect2(22.44, 32.63, 27.74, BASE + 1)]
+    return union(top, pediment, diff(union(walls, plinth), *holes))
+
+def fir(cx, top, Hc, trunk_h, slope=0.62, tw=2.0, tiers=((0.0, 0.40), (0.22, 0.70), (0.46, 1.0))):
+    """Геометричная ель: ярусы — равнобедренные треугольники одного уклона, ствол — прямоугольник."""
+    parts = []
+    for a, b in tiers:
+        ya, yb = top + a * Hc, top + b * Hc; hw = slope * (yb - ya)
+        parts.append(poly((cx, ya), (cx + hw, yb), (cx - hw, yb)))
+    parts.append(rect2(cx - tw / 2, top + Hc - 0.5, cx + tw / 2, top + Hc + trunk_h))
+    return union(*parts)
+
+def firs2(g=1.3, side_k=0.82, dx=12.6, slope=0.74, Hc=27.0, th=6.0,
+          tiers=((0.0, 0.38), (0.2, 0.68), (0.42, 1.0))):
+    """Лес с елями: три геометричные ели — прямые скаты одного уклона, ярусы ровными
+    ступенями, строгая симметрия. Средняя впереди, боковые за ней на просвете g."""
+    mid = fir(25.0, BASE - Hc - th, Hc, th, slope=slope, tiers=tiers)
+    sides = [fir(25.0 + sg * dx, BASE - (Hc + th) * side_k, Hc * side_k, th * side_k, slope=slope,
+                 tw=2.0 * side_k + 0.2, tiers=tiers) for sg in (-1, 1)]
+    sides = drop_small(diff(union(*sides), dilate(mid, g, join="miter")), 1.5)
+    return union(mid, sides)
+
+def firs3(g=1.3, side_k=0.8, slope=0.5, Hc=28.0, th=6.0, tiers=((0.0, 0.40), (0.24, 0.70), (0.46, 1.0))):
+    """Лес с елями: три стройные геометричные ели рядом, без наложения — прямые скаты
+    одного уклона, ярусы ровными ступенями, строгая симметрия. Между елями — просвет g."""
+    hw_m = slope * (tiers[-1][1] - tiers[-1][0]) * Hc
+    mid = fir(25.0, BASE - Hc - th, Hc, th, slope=slope, tiers=tiers)
+    dx = hw_m + hw_m * side_k + g
+    sides = [fir(25.0 + sg * dx, BASE - (Hc + th) * side_k, Hc * side_k, th * side_k, slope=slope,
+                 tw=2.0 * side_k + 0.2, tiers=tiers) for sg in (-1, 1)]
+    return union(mid, *sides)
+
+def rest_base3(halo=0.7):
+    """База отдыха: как в круге 7 (дом без «ступни», ель исходная), но окно с подоконником —
+    верхние створки сливаются с белой полосой подоконника со скруглёнными концами."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2891:608"]["svg"])
+    roof, tree = P(ds[2]), P(ds[1])
+    ax = 21.2
+    body = poly((9.98, BASE), (9.98, 35.66), (ax, 24.6), (32.47, 35.74), (32.47, BASE))
+    body = diff(body, inter(rect2(ax - 3, 20, ax + 3, 28), diff(body, opening(body, 1.3))))
+    pw, mul_ = 2.5, 1.1
+    xl, xr = ax - mul_ / 2 - pw, ax + mul_ / 2
+    upper = [rect2(x, 29.9, x + pw, 34.6) for x in (xl, xr)]
+    sill = rect2(ax - 5.1, 34.0, ax + 5.1, 35.15, 0.55)
+    lower = [rect2(x, 36.25, x + pw, 40.15) for x in (xl, xr)]
+    body = diff(body, *upper, sill, *lower)
+    house = union(roof, body)
+    tree = diff(tree, dilate(house, halo))
+    return union(house, tree)
+
+def scales2():
+    """Весы ближе к квадрату: балка поднята до верха поля, подвесы длиннее,
+    чаши и балка чуть уже — пропорция почти 1 : 1."""
+    return scales(top=7.0, inward=1.0, pan_in=0.5)
+
+def elevator2(lift=6.5, cut=24.5):
+    """Элеватор ближе к квадрату: силосы выше на lift — верх с крышками и балкой поднят,
+    промежуток залит тем же сечением силосов; колос в среднем силосе на месте."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3021"]["svg"])
+    silos = []
+    for d in ds[:3]:
+        q = P(d); q.fillType = pathops.FillType.EVEN_ODD; silos.append(union(q, Path()))
+    band = P(ds[3]); band.fillType = pathops.FillType.EVEN_ODD; band = union(band, Path())
+    out = [move(band, 0, -lift)]
+    for sp in silos:
+        x0, _, x1, _ = sp.bounds
+        up = move(inter(sp, rect2(0, 0, 50, cut)), 0, -lift)
+        low = inter(sp, rect2(0, cut, 50, 50))
+        sec = inter(sp, rect2(0, cut - 0.05, 50, cut + 0.05))
+        sx0, _, sx1, _ = sec.bounds
+        fill = rect2(sx0, cut - lift - 0.3, sx1, cut + 0.3)
+        out.append(union(low, fill, up))
+    res = Path()
+    for q in out: res = union(res, q) if len(list(res.contours)) else union(q, Path())
+    return res
+
+def _cr_path(pts, closed_tail=None):
+    """Гладкий путь Катмулла — Рома через точки (кубиками). closed_tail — точки замыкания."""
+    p = Path(); p.moveTo(*pts[0])
+    ext = [pts[0]] + list(pts) + [pts[-1]]
+    for i in range(1, len(ext) - 2):
+        a, b, c, d_ = ext[i - 1], ext[i], ext[i + 1], ext[i + 2]
+        c1 = (b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6)
+        c2 = (c[0] - (d_[0] - b[0]) / 6, c[1] - (d_[1] - b[1]) / 6)
+        p.cubicTo(*c1, *c2, *c)
+    if closed_tail is not None:
+        for q in closed_tail: p.lineTo(*q)
+        p.close()
+    return p
+
+def _cr_fn(pts):
+    """Функция точки t∈[0,1] на сплайне Катмулла — Рома (равномерно по сегментам)."""
+    ext = [pts[0]] + list(pts) + [pts[-1]]; n = len(pts) - 1
+    def f(t):
+        u = min(max(t, 0.0), 1.0) * n; i = min(int(u), n - 1); s_ = u - i
+        a, b, c, d_ = ext[i], ext[i + 1], ext[i + 2], ext[i + 3]
+        c1 = (b[0] + (c[0] - a[0]) / 6, b[1] + (c[1] - a[1]) / 6)
+        c2 = (c[0] - (d_[0] - b[0]) / 6, c[1] - (d_[1] - b[1]) / 6)
+        return point((b, c1, c2, c), s_)
+    return f
+
+def investments6(we=1.3, ge=0.8, L=9.7):
+    """Инвестиции по референсу: два потока входят слева, третий — снизу, сходятся в древко.
+    Как перья логотипа: у стрелки три параллельные полосы с ровными узкими просветами ge
+    входят прямо в основание стрелки (единая стрелка пака). Просветы сужаются от кромки
+    кадра к стрелке. Единицы — поле референса 36.1 × 34.26: левый край u=0, низ v=34.26."""
+    Hb = 34.26
+    d = norm((193.0, -197.0)); nul = norm((-0.7143, -0.6998))
+    Bc = (29.27, 6.95)
+    half = (3 * we + 2 * ge) / 2
+    tT, tB = add(Bc, mul(nul, half)), sub(Bc, mul(nul, half))
+    top = [(-1.5, 18.98), (0.0, 18.9), (5.65, 18.53), (12.7, 17.1), (19.4, 14.0), (24.3, 9.4), tT, add(tT, mul(d, 2.5))]
+    right = [(17.84, 35.5), (17.84, 34.26), (17.84, 30.9), (18.5, 26.65), (20.5, 21.7), (23.3, 17.1), (27.2, 12.1), tB, add(tB, mul(d, 2.5))]
+    solid = union(_cr_path(top + list(reversed(right)), closed_tail=[(-1.5, 35.5)]), Path())
+    s1e, s2e = add(Bc, mul(nul, we / 2 + ge / 2)), sub(Bc, mul(nul, we / 2 + ge / 2))
+    slit1 = [(-1.5, 26.6), (0.0, 26.35), (5.65, 24.55), (12.0, 21.9), (16.25, 19.05), (20.4, 15.2), add(s1e, mul(d, -3.0)), add(s1e, mul(d, 1.5))]
+    w1 = [3.5, 3.5, 2.4, 1.6, 1.15, ge, ge, ge]
+    slit2 = [(7.77, 35.5), (7.77, 34.26), (9.2, 30.75), (12.2, 26.15), (16.6, 20.65), (21.4, 16.0), add(s2e, mul(d, -3.0)), add(s2e, mul(d, 1.5))]
+    w2 = [4.2, 4.2, 2.6, 1.6, 1.1, ge, ge, ge]
+    def wfn(ws):
+        n = len(ws) - 1
+        return lambda t: ws[min(int(t * n), n - 1)] + (ws[min(int(t * n), n - 1) + 1] - ws[min(int(t * n), n - 1)]) * (t * n - min(int(t * n), n - 1))
+    slits = [P(band_fn(_cr_fn(sp), wfn(ws), parts=14, n=24)) for sp, ws in ((slit1, w1), (slit2, w2))]
+    head = arrow_head(add(Bc, mul(d, L)), d, L)
+    shape = diff(union(solid, head), *slits)
+    shape = union(diff(shape, head), head)                         # стрелка сплошная, просветы в неё не заходят
+    return inter(shape, rect2(0.0, -5.0, 60.0, Hb))
 
 def resource_fields():
     """Поля из нашей иконки «Богатые природные ресурсы» (2888:587) — как есть, без дерева."""
