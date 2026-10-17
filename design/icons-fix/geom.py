@@ -104,3 +104,27 @@ def bez(p0, d0, k0, p3, d3, k3):
     """Кубика из точек и направлений касательных."""
     d0, d3 = norm(d0), norm(d3)
     return (p0, add(p0, mul(d0, k0)), sub(p3, mul(d3, k3)), p3)
+
+def band_fn(center, width, parts=6, n=24):
+    """Полоса по произвольной центральной линии center(t) и ширине width(t), t∈[0,1].
+    Кромки считаются точно и аппроксимируются parts кубиками каждая."""
+    def ctan(t):
+        h = 1e-4; a, b = center(max(0, t - h)), center(min(1, t + h)); return norm(sub(b, a))
+    def edge(t, side): return add(center(t), mul(perp(ctan(t)), side * width(t) / 2))
+    def etan(t, side):
+        h = 1e-4; a, b = edge(max(0, t - h), side), edge(min(1, t + h), side); return norm(sub(b, a))
+    out = {}
+    for side in (+1, -1):
+        segs = []
+        for k in range(parts):
+            ta, tb = k / parts, (k + 1) / parts
+            pts = [edge(ta + (tb - ta) * i / n, side) for i in range(n + 1)]
+            segs.append(fit_piece(pts, etan(ta, side), etan(tb, side)))
+        out[side] = segs
+    f = lambda p: f"{p[0]:.3f} {p[1]:.3f}"
+    left, right = out[+1], out[-1]
+    d = "M" + f(left[0][0])
+    for q in left: d += " C" + f(q[1]) + " " + f(q[2]) + " " + f(q[3])
+    d += " L" + f(right[-1][3])
+    for q in reversed(right): d += " C" + f(q[2]) + " " + f(q[1]) + " " + f(q[0])
+    return d + " Z"

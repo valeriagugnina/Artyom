@@ -1,7 +1,7 @@
 """Генератор исправленных иконок. Каждая функция возвращает один контур (Path).
 Запуск: python3 icons.py [имя ...] — пишет build/<имя>.svg и build/<имя>-grad.svg."""
 import json, math, os, sys
-from geom import point, tangent, norm, perp, add, sub, mul, band, bez, fit_piece
+from geom import point, tangent, norm, perp, add, sub, mul, band, bez, fit_piece, band_fn
 from lib import *
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -380,7 +380,7 @@ def section(shape, T, d, s, L=12.0):
     if best is None or best[0] > 1.5: return None
     return add(c, mul(n, best[1])), add(c, mul(n, best[2]))
 
-def blunt_tip(shape, T, d_in, w_end, extra=0.6, shorten=0.45, y_floor=None):
+def blunt_tip(shape, T, d_in, w_end, extra=0.6, shorten=0.45, y_floor=None, toe=0.0, floor_cut=False):
     """Срезает острый кончик конечности и заменяет его плавно сужающимся торцом
     ширины w_end с прямым срезом. d_in — направление от кончика внутрь конечности."""
     d = norm(d_in)
@@ -393,25 +393,83 @@ def blunt_tip(shape, T, d_in, w_end, extra=0.6, shorten=0.45, y_floor=None):
     A2, B2 = section(shape, T, d, s_cut + 1.5)
     m2 = mul(add(A2, B2), 0.5)
     out = norm(sub(m_cut, m2))                      # ось конечности у кончика, наружу
-    # отрезаем всё дальше сечения
-    n = perp(d); c = add(T, mul(d, s_cut)); hw = math.dist(A, B) / 2 + 1.2
-    mid_off = ((m_cut[0]-c[0])*n[0] + (m_cut[1]-c[1])*n[1])
-    c = add(c, mul(n, mid_off))                     # только окрестность кончика, соседей не трогаем
-    far = poly(add(c, mul(n, -hw)), add(c, mul(n, hw)), add(add(c, mul(n, hw)), mul(d, -s_cut - 1)), add(add(c, mul(n, -hw)), mul(d, -s_cut - 1)))
-    shape = diff(shape, far)
-    # новый торец: на расстоянии (s_cut − keep) от сечения по оси, ширина w_end
+    # отрезаем кончик: только тот кусок фигуры за линией сечения, на котором лежит T
+    n = perp(d); c = add(T, mul(d, s_cut))
+    hp = poly(add(c, mul(n, -60)), add(c, mul(n, 60)), add(add(c, mul(n, 60)), mul(d, -60)), add(add(c, mul(n, -60)), mul(d, -60)))
+    beyond = inter(shape, hp)
+    best = None
+    for cnt in beyond.contours:
+        pts = contour_points(cnt, 0.1)
+        dist = min(math.dist(T, q) for q in pts) if pts else 1e9
+        if best is None or dist < best[0]: best = (dist, cnt)
+    tipc = Path(); best[1].draw(tipc.getPen())
+    shape = diff(shape, tipc)
     ne = perp(out)
     L = s_cut * (1 - shorten)                     # острый кончик визуально короче своей длины
-    if y_floor is not None:                       # нижний угол торца — ровно на базовой линии
+    if y_floor is not None and not floor_cut:     # нижний угол торца — ровно на базовой линии
         L = (y_floor - m_cut[1] - abs(ne[1]) * w_end / 2) / out[1]
+    if floor_cut:                                 # продлеваем за базу и режем по ней горизонтально
+        L = (y_floor - m_cut[1]) / out[1] + 2.0
     ce = add(m_cut, mul(out, L))
     E1, E2 = add(ce, mul(ne, w_end / 2)), sub(ce, mul(ne, w_end / 2))
     # следим, чтобы торец смотрел на A/B без перекрута
     if math.dist(E1, A) > math.dist(E2, A): E1, E2 = E2, E1
+    if toe:                                       # «стамеска»: нижний угол вытянут, срез косой
+        if E1[1] > E2[1]: E1, E2 = add(E1, mul(out, toe)), sub(E2, mul(out, toe * 0.3))
+        else: E2, E1 = add(E2, mul(out, toe)), sub(E1, mul(out, toe * 0.3))
     cap = poly(A, E1, E2, B)
     blunt_tip.log.append((T, round(s_cut, 2), round(math.dist(A, B), 2)))
     shape = union(shape, cap)
     return shape
+
+def tip_cap(shape, T, d_in, s_cut, L, toe=0.0, floor=None):
+    """Заменяет острый кончик конечности. Сечение на расстоянии s_cut от кончика T
+    по направлению d_in (внутрь конечности); кусок фигуры за сечением с кончиком
+    убирается; на его место — торец той же ширины длиной L вдоль оси конечности.
+    toe — «стамеска»: нижний угол торца выдвигается на toe, верхний отступает.
+    floor — торец продлевается за базовую линию и срезается по ней горизонтально."""
+    d = norm(d_in)
+    A, B = section(shape, T, d, s_cut)
+    A2, B2 = section(shape, T, d, s_cut + 2.0)
+    out = norm(sub(mul(add(A, B), .5), mul(add(A2, B2), .5)))    # ось у кончика, наружу
+    n = perp(d); c = add(T, mul(d, s_cut))
+    hp = poly(add(c, mul(n, -60)), add(c, mul(n, 60)), add(add(c, mul(n, 60)), mul(d, -60)), add(add(c, mul(n, -60)), mul(d, -60)))
+    beyond = inter(shape, hp)
+    best = None
+    for cnt in beyond.contours:
+        pts = contour_points(cnt, 0.1)
+        dist = min(math.dist(T, q) for q in pts) if pts else 1e9
+        if best is None or dist < best[0]: best = (dist, cnt)
+    tipc = Path(); best[1].draw(tipc.getPen())
+    shape = diff(shape, tipc)
+    if floor is not None: L = max(L, (floor - min(A[1], B[1])) / max(out[1], 1e-3) + 2.0)
+    EA, EB = add(A, mul(out, L)), add(B, mul(out, L))
+    if toe:
+        if EA[1] > EB[1]: EA, EB = add(EA, mul(out, toe)), sub(EB, mul(out, toe * 0.3))
+        else: EB, EA = add(EB, mul(out, toe)), sub(EA, mul(out, toe * 0.3))
+    shape = union(shape, poly(A, EA, EB, B))
+    if floor is not None: shape = inter(shape, rect2(-10, -10, 60, floor))
+    return shape
+
+def oblique_cut(shape, T, d_in, s, angle):
+    """Срезает кончик конечности прямой под углом angle (в градусах экрана),
+    проходящей через середину сечения на расстоянии s от кончика T.
+    Родное сужение конечности сохраняется — меняется только сам кончик."""
+    d = norm(d_in)
+    A, B = section(shape, T, d, s)
+    m = mul(add(A, B), .5)
+    u = (math.cos(math.radians(angle)), math.sin(math.radians(angle)))
+    nrm = perp(u)
+    if (T[0] - m[0]) * nrm[0] + (T[1] - m[1]) * nrm[1] < 0: nrm = mul(nrm, -1)   # нормаль — к кончику
+    hp = poly(add(m, mul(u, -40)), add(m, mul(u, 40)), add(add(m, mul(u, 40)), mul(nrm, 40)), add(add(m, mul(u, -40)), mul(nrm, 40)))
+    beyond = inter(shape, hp)
+    best = None
+    for cnt in beyond.contours:
+        pts = contour_points(cnt, 0.1)
+        dist = min(math.dist(T, q) for q in pts) if pts else 1e9
+        if best is None or dist < best[0]: best = (dist, cnt)
+    tipc = Path(); best[1].draw(tipc.getPen())
+    return diff(shape, tipc)
 
 def soften(p, r):
     """Скругляет выпуклые углы радиусом r (морфологическое «открытие»)."""
@@ -421,29 +479,222 @@ def soften(p, r):
 
 blunt_tip.log = []
 
+def sharp_knee(shape, P1, d1, P2, d2, box):
+    """Колено острым углом: продолжаем кромку бедра (P1, d1) и голени (P2, d2)
+    до пересечения, внутри box заменяем завиток на чистый угол."""
+    from geom import intersect
+    K = intersect(P1, d1, P2, d2)
+    fill = poly(sub(P1, mul(d1, 3)), P1, K, P2, sub(P2, mul(d2, 3)))
+    # внешняя сторона обеих кромок — вне колена
+    n1, n2 = perp(d1), perp(d2)
+    far = 20
+    out1 = poly(sub(P1, mul(d1, far)), add(P1, mul(d1, far)), add(add(P1, mul(d1, far)), mul(n1, -far)), add(sub(P1, mul(d1, far)), mul(n1, -far)))
+    out2 = poly(sub(P2, mul(d2, far)), add(P2, mul(d2, far)), add(add(P2, mul(d2, far)), mul(n2, far)), add(sub(P2, mul(d2, far)), mul(n2, far)))
+    local = diff(inter(union(shape, fill), box), out1, out2)
+    return union(diff(shape, box), local)
+
 def active_city():
     import re
     ds = re.findall(r' d="([^"]+)"', SRC["2888:595"]["svg"])
     r, head = P(ds[0]), P(ds[1])                   # голову не трогаем — она круглая
-    r = blunt_tip(r, (45.45, 12.3), (-0.74, 0.67), 2.1)      # рука вперёд
-    r = blunt_tip(r, (12.55, 23.3), (0.73, -0.68), 1.9)      # рука назад
-    r = blunt_tip(r, (24.55, 39.2), (0.62, -0.78), 2.2)      # нога вперёд
-    r = blunt_tip(r, (4.55, 43.9), (0.75, -0.66), 2.4, y_floor=BASE + 0.13)   # толчковая нога — на базовой линии
-    return union(soften(r, 0.45), head)
+    # колено: кромка бедра приходит в (35.24; 28.94), кромка голени уходит из (34.46; 31.81)
+    r = sharp_knee(r, (35.2395, 28.9352), norm((35.2395 - 33.5, 28.9352 - 27.74)),
+                   (34.4641, 31.8112), norm((36.3313 - 34.4641, 30.0924 - 31.8112)),
+                   rect2(34.3, 28.3, 37.6, 31.75))
+    r = oblique_cut(r, (45.45, 12.3), (-0.74, 0.67), 2.0, 12)    # рука вперёд: нижний угол впереди
+    r = oblique_cut(r, (12.55, 23.3), (0.73, -0.68), 3.4, 85)    # рука назад
+    r = oblique_cut(r, (24.55, 39.2), (0.62, -0.78), 3.2, 80)    # нога вперёд — в носок
+    r = oblique_cut(r, (4.55, 43.9), (0.75, -0.66), 4.6, 0)      # толчковая — ровно «по земле»
+    return union(soften(r, 0.35), head)
+
+def youth_runner():
+    """Ф2 · Молодёжь: те же окончания ног, что у «Активного города»."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3034"]["svg"])
+    body, rest = P(ds[0]), union(*[P(d) for d in ds[1:]])
+    body = oblique_cut(body, (23.1, 37.7), (0.8, -0.6), 3.0, 80)
+    body = oblique_cut(body, (6.15, 43.9), (0.7, -0.71), 3.6, 0)
+    return union(soften(body, 0.35), rest)
+
+# ── Ф1 · Инвестиции v2: перья сходятся в точку, из неё растёт стрелка ─────────
+
+def investments2(angle=50, tip=(45.6, 4.5), L=7.0, H=4.4, Ls=6.5, pj=1.25, ratio=0.72,
+                 S=(-1.0, 44.0), d0=18, k0=0.45, k3=0.42, p0=13.0, expo=2.0, w0=4.6, wexpo=0.8):
+    """Перья — одно семейство, как крыло «К» в знаке: средняя линия-хребет,
+    крайние перья смещены по нормали на шаг p(t). Шаг сходится от p0 у края
+    до pj в стыке, ширина пера = ratio·шаг — перья не слипаются до самого стыка.
+    Из стыка растёт древко шириной во все три пера и аккуратный наконечник."""
+    a = (math.cos(math.radians(angle)), -math.sin(math.radians(angle)))
+    n = perp(a)
+    B = sub(tip, mul(a, L)); J = sub(B, mul(a, Ls))
+    ws = 2 * pj + ratio * pj                       # ширина пучка в стыке = ширина древка
+    head = poly(tip, add(B, mul(n, H)), sub(B, mul(n, H)))
+    shaft = poly(add(J, mul(n, ws / 2)), add(add(B, mul(a, 0.3)), mul(n, ws / 2)),
+                 sub(add(B, mul(a, 0.3)), mul(n, ws / 2)), sub(J, mul(n, ws / 2)))
+    dd = (math.cos(math.radians(d0)), -math.sin(math.radians(d0)))
+    Je = add(J, mul(a, 0.3))
+    dist = math.hypot(*sub(Je, S))
+    spine = bez(S, dd, dist * k0, Je, a, dist * k3)
+    pitch = lambda t: pj + (p0 - pj) * (1 - t) ** expo
+    bands = []
+    for s_ in (-1, 0, 1):
+        ctr = lambda t, s_=s_: add(point(spine, t), mul(perp(tangent(spine, t)), s_ * pitch(t)))
+        if w0 is None: wid = lambda t: ratio * pitch(t)
+        else: wid = lambda t: min(ratio * pj + (w0 - ratio * pj) * (1 - t) ** wexpo, pitch(t) - (1 - ratio) * pj)
+        bands.append(P(band_fn(ctr, wid, parts=8)))
+    investments2.bands = bands
+    return canvas_clip(union(head, shaft, *bands))
+
+# ── Ф3 · Туризм v2: крылья «К» сходятся в самолётик ────────────────────────────
+
+def plane_right(nose_x, cy, length):
+    """Силуэт планёра из пака (2891:591), развёрнутый носом вправо."""
+    g = src_path("2891:591"); x0, y0, x1, y1 = g.bounds
+    s = length / (y1 - y0)
+    # поворот на 90° по часовой: (x, y) → (−y, x); нос (верх) смотрит вправо
+    m = (0, s, -s, 0, nose_x + s * y0, cy - s * (x0 + x1) / 2)
+    return tf(g, m)
+
+def airplane(nose_x, cy, Lp=15.0, span=17.0, tspan=6.4, f=1.3):
+    """Самолётик сверху, нос вправо: фюзеляж-капсула, стреловидные крылья и стабилизатор."""
+    x0 = nose_x - Lp
+    X = lambda u: x0 + u * Lp
+    body = union(rect2(X(0.03), cy - f, nose_x - f * 1.6, cy + f),
+                 poly((nose_x - f * 1.6, cy - f), (nose_x - f * 0.35, cy - f * 0.55), (nose_x, cy),
+                      (nose_x - f * 0.35, cy + f * 0.55), (nose_x - f * 1.6, cy + f)))
+    parts = [body]
+    for sg in (-1, 1):
+        parts.append(poly((X(0.66), cy + sg * f * 0.5), (X(0.40), cy + sg * span / 2), (X(0.29), cy + sg * span / 2),
+                          (X(0.43), cy + sg * f * 0.5)))
+        parts.append(poly((X(0.20), cy + sg * f * 0.5), (X(0.05), cy + sg * tspan / 2), (X(0.0), cy + sg * tspan / 2),
+                          (X(0.03), cy + sg * f * 0.5)))
+    return union(*parts)
+
+def tourism2(Lp=15.0, span=17.0, gap=0.9, wing_w=32.86, plane_dx=0.0):
+    s = wing_w / (75.0 - 21.11)
+    h = (60.62419 - 1.42019) * s
+    y0 = (TOP + BASE) / 2 - h / 2
+    m = (-s, 0, 0, s, LEFT + 75.0 * s, y0 - 1.42019 * s)      # зеркально: стык справа
+    wings = tf(logo_wings(), m)
+    cy = y0 + ((27.5161 + 33.685) / 2 - 1.42019) * s           # середина стыка
+    plane = airplane(RIGHT + plane_dx, cy, Lp, span)
+    wings = diff(wings, dilate(plane, gap, join="miter"))       # полосы уходят под самолётик
+    return union(wings, plane)
+
+# ── Логистика v2: две обычные стрелки ⇄ ────────────────────────────────────────
+
+def logistics2(t=5.0, hb=14.5, hl=11.0, y1=17.0, y2=33.1):
+    def arrow(x_tail, x_tip, y):
+        sg = 1 if x_tip > x_tail else -1
+        xb = x_tip - sg * hl
+        return union(poly((x_tip, y), (xb, y - hb / 2), (xb, y + hb / 2)),
+                     rect2(min(x_tail, xb + sg * 0.2), y - t / 2, max(x_tail, xb + sg * 0.2), y + t / 2))
+    return union(arrow(LEFT, RIGHT, y1), arrow(RIGHT, LEFT, y2))
+
+# ── Центральный парк v2: исходник, стволы проходят сквозь ротонду до земли ──────
+
+def central_park2(halo=0.7):
+    """Исходная иконка. 2-й и 4-й столбы — это стволы: ствол идёт от кроны до земли
+    одним элементом, кровля и цоколь отделены от него просветом с обеих сторон."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:607"]["svg"])
+    pav, t1, t2 = P(ds[0]), P(ds[1]), P(ds[2])
+    trunks = [(16.408, 18.142), (33.105, 34.749)]       # ширина стволов у основания кроны
+    cols = [(16.2, 18.3), (33.0, 35.0)]                  # 2-й и 4-й столбы ротонды (с запасом)
+    for x0, x1 in cols:                                   # столбы убираем — их место займут стволы
+        pav = diff(pav, rect2(x0, 28.9, x1, 42.2))
+    trees = union(t1, t2, *[rect2(x0, 24.0, x1, BASE) for x0, x1 in trunks])
+    pav = diff(pav, dilate(union(*[rect2(x0, 24.0, x1, BASE) for x0, x1 in trunks]), halo, join="miter"))
+    return union(pav, trees)
+
+# ── Комфортный город v3: исходник + надстроенный этаж, строгая геометрия ───────
+
+def city2(D=9.0, halo=0.7):
+    """Левая половина строится, правая — точное зеркало. Каждый дом получает ещё
+    один этаж высотой D: все линии параллельны исходным, окна второго этажа —
+    копии окон первого. У центрального дома нет крыши."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:571"]["svg"])
+    ground, big_tree, small_tree = P(ds[1]), P(ds[2]), P(ds[4])
+    trees = union(big_tree, small_tree)
+    lin = lambda p0, p1: (lambda x: p0[1] + (p1[1] - p0[1]) * (x - p0[0]) / (p1[0] - p0[0]))
+    # торец
+    fx0, fx1 = 3.84, 10.16
+    f_top = lin((fx0, 25.74), (fx1, 25.02)); f_bot = lin((fx0, 36.18), (fx1, 33.52))
+    face = poly((fx0, f_top(fx0) - D), (fx1, f_top(fx1) - D), (fx1, f_bot(fx1)), (fx0, f_bot(fx0)))
+    fw = []
+    for x0, x1 in ((5.0, 6.6), (7.4, 9.0)):              # по два окна на этаж
+        for dy in (0.0, -D):
+            fw.append(poly((x0, f_top(x0) + 1.7 + dy), (x1, f_top(x1) + 1.7 + dy),
+                           (x1, f_top(x1) + 4.9 + dy), (x0, f_top(x0) + 4.9 + dy)))
+    face = diff(face, *fw)
+    # стена вдоль улицы
+    wx0, wx1 = fx1 + halo, 17.73
+    w_top = lin((10.96, 25.2), (17.73, 26.61)); w_bot = lin((10.96, 33.07), (17.73, 30.17))
+    wall = poly((wx0, w_top(wx0) - D), (wx1, w_top(wx1) - D), (wx1, w_bot(wx1)), (wx0, w_bot(wx0)))
+    ww = []
+    for x0, x1 in ((12.0, 13.56), (14.35, 15.61), (16.23, 17.2)):
+        for dy in (0.0, -D):                               # окна: верх/низ параллельны кромкам стены
+            t0, b0 = w_top(x0) + 1.74 + dy, w_top(x1) + 1.74 + dy
+            ww.append(poly((x0, t0), (x1, b0), (x1, b0 + 3.17 - (w_top(x1) - w_top(x0)) * 0.0 - 0.0 + (w_bot(x1) - w_bot(x0)) * 0.0),
+                           (x0, t0 + 3.17)))
+    wall = diff(wall, *ww)
+    # крыша: карнизы параллельны верху торца и стены на расстоянии halo, конёк над углом
+    e_front = lambda x: f_top(x) - D - halo
+    e_side = lambda x: w_top(x) - D - halo
+    # точка, где карнизы встречаются над углом
+    cx = (e_side(0) - e_front(0)) / ((e_front(1) - e_front(0)) - (e_side(1) - e_side(0)))
+    C = (cx, e_front(cx))
+    apex = (10.05, 21.58 - D)
+    L = 3.5
+    roof = poly((L, e_front(L) - 0.18), apex, (wx1, e_side(wx1) - 1.0), (wx1, e_side(wx1)), C, (L, e_front(L)))
+    house = diff(union(face, wall, roof), dilate(trees, halo))
+    left = union(house, ground, trees)
+    # центральный дом: 2 этажа, без крыши
+    cx0, cx1, cb = wx1 + halo, 50 - wx1 - halo, 31.81
+    ct = 24.99 - 4.8
+    body = rect2(cx0, ct, cx1, cb)
+    cw = [rect2(24.03, 29.25, 25.97, cb + 1)]
+    for dy in (0.0, -4.8):
+        for x0, x1 in ((19.99, 21.94), (28.06, 30.01)):
+            cw.append(rect2(x0, 26.2 + dy, x1, 28.35 + dy))
+    cw.append(rect2(24.03, 26.2 - 4.8, 25.97, 28.35 - 4.8))
+    cw.append(rect2(24.03, 26.2, 25.97, 28.35))
+    center = diff(body, *cw)
+    center = diff(center, dilate(union(trees, flip_x(trees)), halo))   # деревья впереди дома
+    return union(left, flip_x(left), center)
+
+# ── Свято-Георгиевский храм: проще ───────────────────────────────────────────────
+
+def church():
+    """Убран козырёк над входом (белая «галочка» над аркой) и ступеньки кровли
+    по бокам от центрального свода: карниз идёт ровной линией, свод встаёт прямо на него."""
+    import re
+    svg0 = SRC["2892:580"]["svg"]
+    ds = re.findall(r' d="([^"]+)"', svg0)
+    subs = ["M" + x for x in ds[0].split("M") if x.strip()]
+    body = [x for x in subs if not x.startswith("M18.7695 34.063")]   # без «галочки»
+    main = P("".join(body))
+    main.fillType = pathops.FillType.EVEN_ODD
+    main = union(main, Path())
+    # ступеньки 15.77–18.70 и 31.29–34.19 над карнизом (27.92 → 28.71) убираем
+    main = diff(main, rect2(15.6, 27.5, 18.69, 28.70), rect2(31.30, 27.5, 34.4, 28.70))
+    main = union(main, rect2(18.69, 27.9, 31.30, 28.75))           # свод опирается на карниз
+    rest = [P(d) for d in ds[1:]]
+    return union(main, *rest)
 
 # ── сборка ─────────────────────────────────────────────────────────────────────
 
 ICONS = {
-    "investments": investments,
-    "tourism": tourism,
-    "tourism-mirror": lambda: tourism("mirror"),
-    "tourism-logo": lambda: tourism("logo"),
-    "logistics": logistics_flow,
-    "logistics-straight": lambda: logistics_flow("fan"),
-    "park": central_park,
-    "city": city,
+    "investments": investments2,
+    "tourism": tourism2,
+    "logistics": logistics2,
+    "park": central_park2,
+    "city": city2,
     "construction": construction,
     "active": active_city,
+    "youth": youth_runner,
+    "church": church,
 }
 
 def build(names=None):
