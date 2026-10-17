@@ -55,6 +55,30 @@ def sym_var(slug):
         symbols[sid] = paths_of(open(os.path.join(HERE, f"build/variants/{slug}.svg")).read())
     return sid
 
+ICONS4 = [
+    dict(slug="log", node="2888:570", title="Логистический коридор",
+         ask="Примеры: маршрут «туда и обратно» с двумя точками и ферма с дорогами-полосами.",
+         after=[("pack", "2888:570", "A · маршрут", "рекомендую"), ("var", "logistics-hub", "B · склад и дороги", "")],
+         notes=["A — по примеру exchange: две точки и два встречных пути со стрелками-уголками. Нижний путь — поворот верхнего на 180°, линии с круглыми концами, как в примере.",
+                "B — по примеру с фермой: склад, три концентрические дуги-дороги слева и две встречные справа. Встречные упираются в левые через просвет 1,8, дуги проходят перед складом.",
+                "A лучше читается как «коридор туда и обратно» и держится на 24 px."]),
+    dict(slug="career", node="2888:616", title="Карьера",
+         ask="Адаптировать по примеру briefcase.",
+         notes=["Корпус со скруглёнными углами и ручка, как в примере.",
+                "Поперёк — белая полоса-дуга, над ней замок белой точкой."]),
+    dict(slug="init", node="2888:643", title="Поддержка инициатив",
+         ask="Адаптировать по примеру bulb.",
+         notes=["Ладонь оставил нашу, лампочку перерисовал по примеру: колба-круг со срезом, цоколь и пять лучей-капсул.",
+                "Мелкая нить накаливания ушла: на 24 px лампочка читается чище."]),
+    dict(slug="sun", node="4254:3189", title="Солнечный город",
+         ask="Адаптировать по примеру sun.",
+         notes=["Диск и восемь лучей-капсул с круглыми концами, как в примере, пропорции те же."]),
+    dict(slug="ment2", node="2888:639", title="Наставники · искры",
+         ask="Пример sparkles — пробую на «Наставниках» вместо звезды.",
+         after=[("pack", "2888:639", "A · звезда", ""), ("var", "mentors-sparkle", "B · искры", "")],
+         notes=["Звезда — единственное место в паке, куда напрашиваются искры из примера: большая и маленькая, с вогнутыми сторонами.",
+                "Если пример был для другой иконки — скажите для какой."]),
+]
 ICONS = [
     dict(slug="inv", node="4254:1269", title="Ф1 · Инвестиции",
          ask="Взять одно крыло полос, как у самолётика, сделать крупнее, вывести из угла и добавить стрелку.",
@@ -62,10 +86,6 @@ ICONS = [
          notes=["Взято верхнее крыло «К» из знака целиком: три полосы с родным сужением, от широких концов к стыку.",
                 "Крыло крупнее, чем в «Туризме»: масштаб 0,88 против 0,61. Оно выходит из левого нижнего угла, концы полос срезает рамка.",
                 "Из стыка растёт стрелка с наклоном 20°. В варианте B всё горизонтально, ровно как летит самолётик."]),
-    dict(slug="log", node="2888:570", title="Логистический коридор",
-         ask="Стрелки грубые и некрасивые, переделать. Пришлю примеры.",
-         notes=["Пока сделал тоньше: древко 3, наконечник 11 × 8.",
-                "Это временная версия. Переделаю, когда пришлёте примеры."]),
     dict(slug="park", node="2892:607", title="Центральный парк",
          ask="Деревья стоят за входной группой: она залита целиком, деревья отделены от неё горизонтальными линиями. Правое дерево чуть крупнее.",
          notes=["Ротонда залита целиком: кровля и цоколь идут сплошной полосой, ничем не разрезаны.",
@@ -123,7 +143,7 @@ ICONS = [
          notes=["Кузов из трёх наклонных секций с просветом 1,6, как на вашем референсе.",
                 "Задняя стенка кабины и окно наклонены так же. Нос кабины и колёса не менялись."]),
 ]
-for it in ICONS:
+for it in ICONS4 + ICONS:
     it["b"] = sym_before(it["node"])
     after = it.get("after") or [("pack", it["node"], "Стало", "")]
     it["a"] = [((sym_pack(k) if kind == "pack" else sym_var(k)), lab, tag) for kind, k, lab, tag in after]
@@ -164,7 +184,7 @@ grads = ("".join(
                          ("Green", ("#00843D", "#47D7AC", "#DDF314")),
                          ("Red", ("#E4002B", "#FFC851", "#FF6900")))))
 
-TOC = "".join(f'<a href="#{it["slug"]}">{it["title"].replace("Ф1 · ", "").replace("Ф3 · ", "").replace("Ф2 · ", "")}</a>' for it in ICONS)
+TOC = "".join(f'<a href="#{it["slug"]}">{it["title"]}</a>' for it in ICONS4) + " · " + "".join(f'<a href="#{it["slug"]}">{it["title"].replace("Ф1 · ", "").replace("Ф3 · ", "").replace("Ф2 · ", "")}</a>' for it in ICONS)
 
 PAGE = f"""<title>Правки иконок Заводоуковска</title>
 <meta name="claude:viewport-fit-sides" content="cover">
@@ -258,6 +278,7 @@ section.icon.wide {{ grid-template-columns: minmax(0, 1fr); grid-template-areas:
 .srow {{ margin: 0; display: grid; gap: 4px; justify-items: start }}
 .sz {{ display: flex; align-items: flex-end; gap: 10px; background: var(--tile); border: 1px solid var(--line); border-radius: 4px; padding: 8px 10px }}
 .srow figcaption {{ font-size: 11.5px; color: var(--muted); max-width: 150px }}
+.grp {{ font-size: 15px; letter-spacing: .02em; color: var(--muted); padding-top: 8px }}
 .next {{ background: var(--accent-soft); border-radius: 6px; padding: 18px 20px; display: grid; gap: 6px; max-width: 80ch }}
 .num {{ font-family: var(--f-mono); font-variant-numeric: tabular-nums }}
 @media (max-width: 760px) {{
@@ -270,10 +291,10 @@ section.icon.wide {{ grid-template-columns: minmax(0, 1fr); grid-template-areas:
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>{grads}{defs}</defs></svg>
 <div class="wrap" id="root">
   <header class="intro">
-    <span class="eyebrow">Черновик · Иконки · круг 3</span>
+    <span class="eyebrow">Черновик · Иконки · круг 4</span>
     <h1>Правки иконок</h1>
-    <p>Третий круг по вашим замечаниям. Слева версия из Фигмы, справа новая в итоговом размере и положении в кадре. Под каждой реальные размеры 50, 32 и 24 px. Числа даны в единицах сетки 50 × 50.</p>
-    <p>Где есть варианты, отметил, какой рекомендую. По городу нужен ваш выбор, вопросы собраны внизу страницы.</p>
+    <p>Наверху — иконки, адаптированные по вашим примерам. Ниже — третий круг, по нему ещё жду ответа. Слева версия из Фигмы, справа новая в итоговом размере и положении в кадре. Под каждой реальные размеры 50, 32 и 24 px.</p>
+    <p>Коворкинг оставил компьютером. Вопросы собраны внизу страницы.</p>
   </header>
   <div class="bar" role="toolbar" aria-label="Вид иконок">
     <div class="seg" role="group" aria-label="Цвет">
@@ -286,6 +307,9 @@ section.icon.wide {{ grid-template-columns: minmax(0, 1fr); grid-template-areas:
     <span class="legend"><span><i style="background:var(--key-a)"></i>поля 4 и 46</span><span><i style="background:var(--key-b)"></i>верх 7, база 43,1</span></span>
   </div>
   <nav class="toc" aria-label="Иконки">{TOC}<a href="#pack">Весь пак</a><a href="#small">Мелкий размер</a><a href="#ask">Что уточнить</a></nav>
+  <h2 class="grp">Круг 4 · по вашим примерам</h2>
+  {"".join(section(it) for it in ICONS4)}
+  <h2 class="grp">Круг 3 · ждёт вашего ответа</h2>
   {"".join(section(it) for it in ICONS)}
   <section class="review" id="pack">
     <header><h2>Весь пак: сетка и объём</h2>
@@ -311,7 +335,9 @@ section.icon.wide {{ grid-template-columns: minmax(0, 1fr); grid-template-areas:
   <section class="rv" id="ask"><h3>Что уточнить</h3>
     <ul class="rules">
       <li>Комфортный город: какой вариант ближе, A или B?</li>
-      <li>Логистика и коворкинг: жду примеры, по ним перерисую.</li>
+      <li>Логистика: A (маршрут) или B (склад и дороги)?</li>
+      <li>Пример с документом (file): для какой нашей иконки он? Похожей в паке не нашёл.</li>
+      <li>Искры (sparkles): я попробовал их на «Наставниках» вместо звезды. Если они для другой иконки — скажите какой.</li>
       <li>Наставники: хватит ли того, что сделал, или подогнать сильнее?</li>
       <li>Старое «Участие» с хлопком убрал из набора, как вы сказали.</li>
     </ul>

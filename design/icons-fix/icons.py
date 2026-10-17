@@ -940,6 +940,109 @@ def glider_original_diag():
     c, s_ = math.cos(a), math.sin(a)
     return tf(g, (c, s_, -s_, c, 25 - (c * cx - s_ * cy), 25 - (s_ * cx + c * cy)))
 
+# ── круг 4: адаптация под примеры ─────────────────────────────────────────────
+
+def rline(pts, w):
+    """Линия по точкам толщиной w с круглыми концами и стыками (как в примерах)."""
+    return stroke(line_path(pts), w, cap="round", join="round")
+
+def arc_pts(c, r, a0, a1, n=24):
+    return [(c[0] + r * math.cos(math.radians(a0 + (a1 - a0) * k / n)),
+             c[1] + r * math.sin(math.radians(a0 + (a1 - a0) * k / n))) for k in range(n + 1)]
+
+def logistics_route(w=3.6, r_pt=5.4, R=7.5):
+    """Маршрут «туда и обратно» (по примеру exchange): две точки и два встречных пути
+    со стрелками-уголками. Нижний путь — поворот верхнего на 180°."""
+    p0 = (10.5, 37.5)                                       # нижняя левая точка
+    x = p0[0]; y_h = 12.5                                   # путь вверх, дуга, вправо
+    pts = [(x, p0[1] - r_pt - 1.2), (x, y_h + R)] + arc_pts((x + R, y_h + R), R, 180, 270)[1:] + [(29.5, y_h)]
+    path = rline(pts, w)
+    tip = (29.5 + w * 0.15, y_h); a = 5.6
+    head = rline([(tip[0] - a, tip[1] - a), tip, (tip[0] - a, tip[1] + a)], w)
+    half = union(path, head, circle(*p0, r_pt))
+    return union(half, rot180(half, (25.0, 25.0)))
+
+def logistics_hub(w=3.4, gap=1.8):
+    """Склад и дороги по примеру с фермой: три концентрические дуги слева уходят вниз-вправо,
+    две встречные дуги справа упираются в них через просвет; дуги проходят перед складом."""
+    left = []
+    C = (4.0, 66.0)
+    for y0 in (27.0, 32.6, 38.2):
+        R = C[1] - y0
+        a1 = math.degrees(math.asin((C[1] - BASE - 3) / R))
+        left.append(rline(arc_pts(C, R, 270, 360 - a1 + 0.0, 40)[0:1] and
+                          [(C[0] + R * math.cos(math.radians(t)), C[1] - R * math.sin(math.radians(t))) for t in
+                           [90 - (90 - a1) * k / 40 for k in range(41)]], w))
+    left = union(*left)
+    right = []
+    C2 = (46.0, 70.0)
+    for y0 in (32.6, 38.2):
+        R = C2[1] - y0
+        a1 = math.degrees(math.asin((C2[1] - BASE - 3) / R))
+        right.append(rline([(C2[0] - R * math.cos(math.radians(t)), C2[1] - R * math.sin(math.radians(t))) for t in
+                            [90 - (90 - a1) * k / 40 for k in range(41)]], w))
+    right = diff(union(*right), dilate(left, gap))
+    keep = Path()                                           # от правых дуг оставляем куски у правого края
+    for cnt in right.contours:
+        if cnt.bounds[2] > 44: cnt.draw(keep.getPen())
+    house = poly((14.0, 14.5), (25.0, 6.0), (36.0, 14.5), (36.0, 30.0), (14.0, 30.0))
+    house = diff(house, rect2(21.5, 19.0, 28.5, 30.1))
+    roads = canvas_clip(union(left, union(keep, Path())), x0=0, x1=50)
+    return union(diff(house, dilate(roads, gap)), roads)
+
+def career():
+    """Портфель по примеру: скруглённый корпус, ручка, белая полоса-дуга поперёк, замок-точка."""
+    body = rect2(5.5, 15.0, 44.5, 42.0, 5.5)
+    handle = diff(rect2(17.5, 7.0, 32.5, 17.0, 4.0), rect2(21.2, 10.6, 28.8, 17.5, 1.2))
+    band = Path()                                            # белая дуга: верх и низ — параллельные дуги
+    band.moveTo(5.0, 24.0); band.quadTo(25.0, 33.5, 45.0, 24.0); band.lineTo(45.0, 27.6)
+    band.quadTo(25.0, 37.1, 5.0, 27.6); band.close()
+    dot = circle(25.0, 22.4, 2.0)                            # замок — белая точка над полосой
+    return union(diff(body, band, dot), handle)
+
+def bulb_group(cx, cy, k):
+    """Лампочка с лучами по примеру bulb: колба-круг со срезом, цоколь, пять лучей-капсул."""
+    r = 6.0 * k
+    glass = inter(circle(cx, cy, r), rect2(cx - 20, cy - 20, cx + 20, cy + 4.9 * k))
+    neck = poly((cx - 3.6 * k, cy + 3.5 * k), (cx + 3.6 * k, cy + 3.5 * k), (cx + 3.0 * k, cy + 4.9 * k), (cx - 3.0 * k, cy + 4.9 * k))
+    cap = inter(circle(cx, cy + 7.1 * k, 3.0 * k), rect2(cx - 5 * k, cy + 6.1 * k, cx + 5 * k, cy + 12 * k))
+    rays = [rline([(cx, cy - 10 * k), (cx, cy - 9 * k)], 2 * k),
+            rline([(cx - 9 * k, cy), (cx - 8 * k, cy)], 2 * k), rline([(cx + 8 * k, cy), (cx + 9 * k, cy)], 2 * k),
+            rline([(cx - 7.1 * k, cy - 7.1 * k), (cx - 6.4 * k, cy - 6.4 * k)], 2 * k),
+            rline([(cx + 6.4 * k, cy - 6.4 * k), (cx + 7.1 * k, cy - 7.1 * k)], 2 * k)]
+    return union(glass, neck, cap, *rays)
+
+def initiatives():
+    """Поддержка инициатив: ладонь исходная, лампочка с лучами — по примеру."""
+    import re
+    hand = P(re.findall(r' d="([^"]+)"', SRC["2888:643"]["svg"])[0])
+    return union(hand, bulb_group(27.6, 13.8, 1.12))
+
+def sun():
+    """Солнечный город по примеру sun: диск и восемь лучей-капсул с круглыми концами."""
+    cx, cy, k = 25.0, 24.35, 2.0
+    parts = [circle(cx, cy, 5.0 * k)]
+    for j in range(8):
+        a = math.radians(j * 45)
+        r0, r1 = 7.8 * k, 9.0 * k
+        parts.append(rline([(cx + r0 * math.cos(a), cy + r0 * math.sin(a)), (cx + r1 * math.cos(a), cy + r1 * math.sin(a))], 2.0 * k))
+    return union(*parts)
+
+def sparkle(cx, cy, R, waist=0.18):
+    """Четырёхлучевая искра с вогнутыми сторонами (как в примере sparkles)."""
+    p = Path(); p.moveTo(cx, cy - R)
+    for (ax, ay), (bx, by) in (((0, -1), (1, 0)), ((1, 0), (0, 1)), ((0, 1), (-1, 0)), ((-1, 0), (0, -1))):
+        c = (cx + (ax + bx) * R * waist, cy + (ay + by) * R * waist)
+        p.quadTo(*c, cx + bx * R, cy + by * R)
+    p.close(); return union(p, Path())
+
+def mentors_sparkle():
+    """Наставники с искрами вместо пятиконечной звезды."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:639"]["svg"])
+    people = union(*[P(d) for d in ds[:4]], poly((10.55, 43.1), (11.49, 34.6), (12.3, 43.1)))
+    return union(people, sparkle(36.6, 13.2, 6.6), sparkle(43.0, 6.4, 3.4))
+
 # ── сборка ─────────────────────────────────────────────────────────────────────
 
 ICONS = {

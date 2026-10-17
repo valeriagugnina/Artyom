@@ -20,11 +20,12 @@ SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
 
 REBUILT = {   # узел → функция новой версии
     "4254:1269": lambda: I.investments3(theta=20, s=0.88, tip=(46, 9.8)),
-    "4254:3107": I.tourism2, "2888:570": I.logistics3,
+    "4254:3107": I.tourism2, "2888:570": I.logistics_route,
     "2892:607": I.central_park3, "2892:571": lambda: I.city3("B"), "2888:583": I.construction_plain,
     "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church2,
     "2891:614": I.hotel, "2888:632": I.coworking, "2888:612": I.rocket, "2892:626": I.kite,
     "4254:3191": I.scales, "2891:591": I.glider, "4254:3005": I.truck_slanted, "2888:639": I.mentors,
+    "2888:616": I.career, "2888:643": I.initiatives, "4254:3189": I.sun,
 }
 LEFT_CUT = {"2888:612"}    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
 RENAME = {"4254:3193": "Участие",                     # две ладошки — это «Участие»
@@ -71,6 +72,8 @@ VARIANTS = {   # узел → дополнительные варианты дл
     "4254:1269": [("investments-flat", lambda: I.investments3(theta=0, s=0.649, tip=(46, 23.0), clip=False), "float")],
     "2892:571": [("city-a", lambda: I.city3("A"), None)],
     "2891:591": [("glider-orig", I.glider_original_diag, None)],
+    "2888:570": [("logistics-hub", I.logistics_hub, "ground")],
+    "2888:639": [("mentors-sparkle", I.mentors_sparkle, None)],
 }
 
 def variant_place(node, mode, p):
@@ -78,6 +81,7 @@ def variant_place(node, mode, p):
         x0, y0, x1, y1 = p.bounds; w, h = x1 - x0, y1 - y0
         s = min((RIGHT - LEFT) / w, (BASE - TOP) / h)
         return s, 25 - s * (x0 + x1) / 2, (TOP + BASE) / 2 - s * (y0 + y1) / 2
+    if mode == "ground": node = "—"                          # обычная «стоящая» посадка на базу
     s, dx, dy, _ = place(node, p); return s, dx, dy
 
 def main():
