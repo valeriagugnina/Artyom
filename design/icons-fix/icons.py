@@ -877,7 +877,7 @@ def investments3(theta=38.0, s=0.82, L=7.2, H=4.3, tip=(45.6, 4.6), clip=True):
 
 # ── Комфортный город v4: аккуратный второй этаж ─────────────────────────────────
 
-def city3(variant="B", halo=0.7):
+def city3(variant="B", halo=0.7, side_windows=True, tree_k=1.0):
     """A — второй этаж только у центральной «хрущёвки», боковые дома как в исходнике;
     B — всем домам по невысокому второму этажу (D = 5, а не 9).
     Общие правила: левая половина строится, правая — зеркало; линии исходника
@@ -885,8 +885,14 @@ def city3(variant="B", halo=0.7):
     его верх стоит на одной линии с соседями."""
     import re
     ds = re.findall(r' d="([^"]+)"', SRC["2892:571"]["svg"])
-    ground, big_tree, small_tree = P(ds[1]), P(ds[2]), P(ds[4])
-    trees = union(big_tree, small_tree)
+    ground, big_t, small_t = P(ds[1]), P(ds[2]), P(ds[4])
+    if tree_k != 1.0:                                       # деревья крупнее — растут от основания ствола
+        def grow(t):
+            x0, y0, x1, y1 = t.bounds; cx = (x0 + x1) / 2
+            return tf(t, (tree_k, 0, 0, tree_k, cx - tree_k * cx, y1 - tree_k * y1))
+        big_t, small_t = grow(big_t), grow(small_t)
+        ground = diff(ground, dilate(union(big_t, small_t), halo))
+    trees = union(big_t, small_t)
     D = 5.0 if variant == "B" else 0.0
     lin = lambda p0, p1: (lambda x: p0[1] + (p1[1] - p0[1]) * (x - p0[0]) / (p1[0] - p0[0]))
     fx0, fx1 = 3.84, 10.16
@@ -901,7 +907,7 @@ def city3(variant="B", halo=0.7):
         for dy in rows:                                     # окна — копии исходного ряда
             t0, t1 = w_top(x0) + 1.74 + dy, w_top(x1) + 1.74 + dy
             ww.append(poly((x0, t0), (x1, t1), (x1, t1 + 3.17), (x0, t0 + 3.17)))
-    wall = diff(wall, *ww)
+    if side_windows: wall = diff(wall, *ww)
     e_front = lambda x: f_top(x) - D - halo
     e_side = lambda x: w_top(x) - D - halo
     cx = (e_side(0) - e_front(0)) / ((e_front(1) - e_front(0)) - (e_side(1) - e_side(0)))
@@ -1042,6 +1048,260 @@ def mentors_sparkle():
     ds = re.findall(r' d="([^"]+)"', SRC["2888:639"]["svg"])
     people = union(*[P(d) for d in ds[:4]], poly((10.55, 43.1), (11.49, 34.6), (12.3, 43.1)))
     return union(people, sparkle(36.6, 13.2, 6.6), sparkle(43.0, 6.4, 3.4))
+
+# ── круг 5 ───────────────────────────────────────────────────────────────────
+
+def truck_solid():
+    """Грузовик с наклоном, но кузов — один наклонный блок, без полос внутри."""
+    return truck_slanted(n=1)
+
+def church3():
+    """Как church2 + закрыт просвет-«линза» под центральным барабаном (его низ — дуга)."""
+    return union(church2(), rect2(21.63, 24.0, 28.34, 26.4))
+
+def hotel2():
+    """Крыша стыкуется со стенами прямым углом: скруглённые концы карниза срезаны по стенам."""
+    h = hotel()
+    eaves = union(rect2(0, 15.0, 7.976, 21.0), rect2(42.018, 15.0, 50, 21.0))
+    return diff(h, eaves)
+
+def initiatives2():
+    """Лампочка крупнее (k 1.12 → 1.4), цоколь по-прежнему над ладонью."""
+    import re
+    hand = P(re.findall(r' d="([^"]+)"', SRC["2888:643"]["svg"])[0])
+    k = 1.4
+    return union(hand, bulb_group(27.6, 28.6 - 10.1 * k, k))
+
+def mentors_sparkle2():
+    """Искры вместо звезды, крупнее."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:639"]["svg"])
+    people = union(*[P(d) for d in ds[:4]], poly((10.55, 43.1), (11.49, 34.6), (12.3, 43.1)))
+    big = sparkle(37.0, 12.4, 8.2)
+    return union(diff(people, dilate(big, 1.0)), big, sparkle(45.2, 3.4, 4.2))
+
+def rocket2(ext=4.5):
+    """Выхлоп длиннее на ext (полосы продолжены по своему ходу), срез по-прежнему одной
+    вертикалью — ракета в кадре сдвигается вправо, а срез остаётся на направляющей 4."""
+    p = src_path("2888:612")
+    ends = [((5.0039, 45.0591), (-0.999, 0.02), (5.6973, 42.0522), (-0.997, 0.073)),
+            ((5.9414, 40.8784), (-0.995, 0.095), (6.5303, 38.1626), (-0.993, 0.116)),
+            ((6.7422, 36.9604), (-0.99, 0.145), (7.2959, 34.189), (-0.988, 0.155))]
+    for a, da, b, db in ends:
+        p = union(p, poly(add(a, mul(da, -0.3)), add(a, mul(da, ext + 3)), add(b, mul(db, ext + 3)), add(b, mul(db, -0.3))))
+    return inter(p, rect2(7.35 - ext, 0, 50, 50))
+
+def glider_b():
+    return glider_original_diag()
+
+def capsule(cx, cy, w, h):
+    return rect2(cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2, h / 2)
+
+def pine(tiers, trunk):
+    """Иконочная сосна: ярусы-капсулы одной высоты, ствол-прямоугольник."""
+    return union(*[capsule(*t) for t in tiers], rect2(*trunk))
+
+def central_park4(halo=0.7):
+    """Расположение как в круге 3; деревья перерисованы иконочно — три яруса-капсулы;
+    загнутые концы кровли без острого крючка: срезаны по нижней кромке и скруглены."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:607"]["svg"])
+    pav = P(ds[0])
+    orig = pav
+    for x0, x1, yl, yr in ((16.2, 18.3, 29.25, 29.15), (33.0, 35.0, 29.15, 29.25)):
+        pav = diff(pav, rect2(x0, 28.9, x1, 42.2))
+        pav = union(pav, inter(orig, poly((x0, 20), (x1, 20), (x1, yr), (x0, yl))))
+    # концы кровли: убираем крючок ниже нижней кромки и скругляем внешний нижний угол
+    for xa, xb, cx in ((0, 8.3, 7.12), (41.7, 50, 42.88)):
+        pav = diff(pav, rect2(xa, 30.35, xb, 32.5))
+        sgn = -1 if cx < 25 else 1
+        corner = rect2(min(cx, cx + sgn * 1.2), 29.3, max(cx, cx + sgn * 1.2), 30.5)
+        pav = diff(pav, diff(corner, circle(cx, 29.35, 1.0)))
+    t1 = pine([(18.0, 9.4, 9.0, 4.6), (15.8, 13.2, 15.0, 4.8), (16.6, 17.3, 17.6, 4.6)], (16.408, 17.0, 18.142, BASE))
+    t2 = pine([(35.0, 13.1, 9.5, 4.4), (33.3, 16.8, 15.0, 4.6), (34.0, 20.5, 20.5, 4.4)], (32.985, 20.0, 34.875, BASE))
+    t1 = diff(t1, dilate(t2, halo))
+    trees = diff(union(t1, t2), dilate(pav, halo, join="miter"))
+    return union(pav, trees)
+
+def logistics_loop(w=3.6, r_pt=4.6, R=7.0, a=5.2):
+    """Маршрут туда и обратно: две точки, соединённые двумя путями в одно кольцо;
+    на верхнем пути стрелка вправо, на нижнем — влево."""
+    A, B = (10.0, 40.0), (40.0, 10.0)
+    top = [A, (A[0], B[1] + R)] + arc_pts((A[0] + R, B[1] + R), R, 180, 270)[1:] + [B]
+    bot = [B, (B[0], A[1] - R)] + arc_pts((B[0] - R, A[1] - R), R, 0, 90)[1:] + [A]
+    ring = union(rline(top, w), rline(bot, w))
+    mx = 26.5
+    heads = union(rline([(mx - a * 0.8, B[1] - a), (mx, B[1]), (mx - a * 0.8, B[1] + a)], w),
+                  rline([(50 - mx + a * 0.8, A[1] - a), (50 - mx, A[1]), (50 - mx + a * 0.8, A[1] + a)], w))
+    return union(ring, heads, circle(*A, r_pt), circle(*B, r_pt))
+
+def logistics_route2(w=3.6, r_pt=4.4, R=7.5, a=5.0):
+    """Как пример exchange, но путь выходит прямо из точки (полностью соединены),
+    а стрелка заканчивается напротив второй точки."""
+    p0 = (10.5, 37.5); y_h = 12.5
+    pts = [p0, (p0[0], y_h + R)] + arc_pts((p0[0] + R, y_h + R), R, 180, 270)[1:] + [(31.0, y_h)]
+    tip = (31.0, y_h)
+    half = union(rline(pts, w), rline([(tip[0] - a, tip[1] - a), tip, (tip[0] - a, tip[1] + a)], w), circle(*p0, r_pt))
+    return union(half, rot180(half, (25.0, 25.0)))
+
+def farm():
+    """Ферма — новая иконка по примеру: амбар и поля-полосы. В нашем духе: полосы срезаны
+    рамкой (без круглых концов), между амбаром и полями — просвет."""
+    w, gap = 3.4, 1.6
+    C = (4.0, 66.0); bands = []
+    for y0 in (27.0, 32.6, 38.2):
+        R = C[1] - y0
+        bands.append(stroke(line_path([(C[0] + R * math.cos(math.radians(t)), C[1] - R * math.sin(math.radians(t)))
+                                       for t in [91 - 41 * k / 40 for k in range(41)]]), w, cap="butt", join="round"))
+    left = union(*bands)
+    C2 = (46.0, 70.0); right = []
+    for y0 in (32.6, 38.2):
+        R = C2[1] - y0
+        right.append(stroke(line_path([(C2[0] - R * math.cos(math.radians(t)), C2[1] - R * math.sin(math.radians(t)))
+                                       for t in [91 - 30 * k / 40 for k in range(41)]]), w, cap="butt", join="round"))
+    right = diff(union(*right), dilate(left, gap))
+    keep = Path()
+    for cnt in right.contours:
+        if cnt.bounds[2] > 44: cnt.draw(keep.getPen())
+    fields = canvas_clip(union(left, union(keep, Path())), x0=LEFT, x1=RIGHT)
+    barn = poly((14.0, 14.5), (25.0, 6.0), (36.0, 14.5), (36.0, 30.0), (14.0, 30.0))
+    barn = diff(barn, rect2(21.5, 19.0, 28.5, 30.1))
+    return union(diff(barn, dilate(fields, gap)), fields)
+
+def big_tree(cx, base_y, h):
+    """Крупное лиственное дерево из исходника города, увеличенное до высоты h."""
+    import re
+    t = P(re.findall(r' d="([^"]+)"', SRC["2892:571"]["svg"])[2])      # большое дерево
+    x0, y0, x1, y1 = t.bounds; k = h / (y1 - y0)
+    return tf(t, (k, 0, 0, k, cx - k * (x0 + x1) / 2, base_y - k * y1))
+
+def city4(variant="C1", halo=0.7):
+    """C1: только центральная хрущёвка в конце дорожки и крупные деревья по бокам — ростом
+    с дом; дорожка шире и выше. C2: вариант B без окон на боковых домах, деревья крупнее."""
+    if variant == "C2":
+        return city3("B", side_windows=False, tree_k=1.45)
+    # дом: два этажа, 3 × 2 окна, дверь
+    hx0, hx1, ht, hb = 13.0, 37.0, 12.0, 33.0
+    house = rect2(hx0, ht, hx1, hb)
+    wins = [rect2(23.2, hb - 7.0, 26.8, hb + 1)]
+    for t in (ht + 2.8, ht + 10.2):
+        for x0 in (16.4, 23.2, 30.0):
+            if not (x0 == 23.2 and t > ht + 5): wins.append(rect2(x0, t, x0 + 3.6, t + 4.6))
+    house = diff(house, *wins)
+    # земля с дорожкой: тёмная полоса, белая дорожка от двери вниз и вширь
+    ground = rect2(LEFT, hb + halo, RIGHT, BASE)
+    road = poly((23.2, hb), (26.8, hb), (35.5, BASE + 0.1), (14.5, BASE + 0.1))
+    ground = diff(ground, road)
+    trees = union(big_tree(12.6, BASE, 21.5), big_tree(37.4, BASE, 21.5))
+    back = diff(union(house, ground), dilate(trees, halo))
+    return union(back, trees)
+
+# ── Ф1 · Инвестиции v4: три потока из угла сливаются, стрелка отдельно ────────
+
+def investments4(e=17.0, W0=5.4, wm=0.9, um=40.0, gap=2.6, L=10.0, H=6.4, stem=0.0,
+                 k0=0.42, k3=0.48, taper=1.0):
+    """Симметрично относительно диагонали из левого нижнего угла. Средний поток идёт
+    прямо из угла; боковые входят слева (горизонтально) и снизу (вертикально) и
+    заворачивают к среднему, как потоки воздуха. В точке M все три сливаются в одно,
+    как полосы в стыке знака. Стрелка — отдельный элемент через просвет."""
+    C = (LEFT, BASE)
+    a = norm((1.0, -1.0)); n = perp(a)
+    M = add(C, mul(a, um))
+    R = lambda p: (C[0] - (p[1] - C[1]), C[1] - (p[0] - C[0]))        # отражение через диагональ
+    W = lambda t: wm + (W0 - wm) * (1 - t) ** taper
+    # средний поток — прямой
+    mid = (sub(C, mul(a, 4.0)), None)
+    mid_c = (sub(C, mul(a, 4.0)), sub(C, mul(a, 4.0 - um / 3)), sub(M, mul(a, um / 3)), M)
+    bands = [P(band_fn(lambda t: point(mid_c, t), W, parts=4))]
+    # левый поток: входит слева горизонтально и заворачивает к M
+    S = (C[0] - 4.0, C[1] - e)
+    dist = math.hypot(*sub(M, S))
+    side = bez(S, (1, 0), dist * k0, M, a, dist * k3)
+    left = P(band_fn(lambda t: point(side, t), W, parts=6))
+    bands += [left, tf(left, (0, -1, -1, 0, C[0] + C[1], C[1] + C[0]))]   # нижний = зеркало левого
+    flows = union(*bands)
+    if stem > 0:
+        flows = union(flows, poly(add(M, mul(n, wm * 1.2)), add(add(M, mul(a, stem)), mul(n, wm * 1.2)),
+                                  sub(add(M, mul(a, stem)), mul(n, wm * 1.2)), sub(M, mul(n, wm * 1.2))))
+    B = add(M, mul(a, stem + gap))
+    head = poly(add(B, mul(a, L)), add(B, mul(n, H)), sub(B, mul(n, H)))
+    return canvas_clip(union(flows, head), x0=LEFT, y0=0, x1=50, y1=BASE)
+
+def investments5(e=20.5, W0=6.3, wj=1.2, gj=0.45, G0=2.4, um=39.5, gap=2.8, L=10.5, H=6.8,
+                 stem=2.0, tip=False, wexp=1.3):
+    """Как стык в знаке: средний поток — по диагонали из угла, боковые — её зеркальные
+    смещения, шаг p(u) плавно сходится к стыку. Боковые входят в кадр слева (горизонтально)
+    и снизу (вертикально). Ширина пера не больше шага минус просвет, поэтому просветы
+    видны до самого стыка. В стыке три пера сливаются в одно древко; стрелка — отдельно."""
+    C = (LEFT, BASE); a = norm((1.0, -1.0)); n = perp(a)            # n — вниз-вправо
+    u0 = 0.7071 * e; p0 = 0.7071 * e; pj = wj + gj
+    m0 = -(um - u0) / (p0 - pj)
+    def f(sv):                                                        # Эрмит: f(0)=1, f(1)=0, f'(1)=0
+        return (2 * sv**3 - 3 * sv**2 + 1) + m0 * (sv**3 - 2 * sv**2 + sv)
+    def pitch(u):
+        if u <= u0: return p0 + (u0 - u)
+        return pj + (p0 - pj) * f((u - u0) / (um - u0))
+    def width(u):
+        sv = min(1.0, max(0.0, (u - u0) / (um - u0))) if u > u0 else 0.0
+        g = gj + (G0 - gj) * (1 - sv)
+        w = wj + (W0 - wj) * (1 - sv) ** wexp
+        lim = pitch(u) - g; kk = 0.35                               # мягкий минимум — без излома кромки
+        sm = -kk * math.log(math.exp(-w / kk) + math.exp(-lim / kk))
+        return max(wj, sm)
+    us = -4.0
+    bands = []
+    for sg in (-1, 0, 1):
+        ustart = us if sg == 0 else u0 - 5.0
+        ctr = lambda t, sg=sg, ustart=ustart: add(add(C, mul(a, ustart + (um - ustart) * t)), mul(n, sg * pitch(ustart + (um - ustart) * t)))
+        wid = lambda t, ustart=ustart, sg=sg: (W0 if sg == 0 and ustart + (um - ustart) * t < u0 else width(ustart + (um - ustart) * t))
+        bands.append(P(band_fn(ctr, wid, parts=10, n=30)))
+    flows = union(*bands)
+    J = add(C, mul(a, um)); ws = 3 * wj + 2 * gj
+    if stem > 0:
+        end = add(J, mul(a, stem))
+        if tip: flows = union(flows, poly(add(J, mul(n, ws / 2)), add(end, mul(a, ws * 0.6)), sub(J, mul(n, ws / 2))))
+        else: flows = union(flows, poly(add(J, mul(n, ws / 2)), add(end, mul(n, ws / 2)), sub(end, mul(n, ws / 2)), sub(J, mul(n, ws / 2))))
+    B = add(J, mul(a, stem + (ws * 0.6 if tip else 0) + gap))
+    head = poly(add(B, mul(a, L)), add(B, mul(n, H)), sub(B, mul(n, H)))
+    return canvas_clip(union(flows, head), x0=LEFT, y0=0, x1=50, y1=BASE)
+
+def career2():
+    """Портфель: углы строже (как у прежней «Карьеры»), ручка входит в корпус прямо —
+    прямые стойки, скруглены только верхние углы; белая дуга и замок как в круге 4."""
+    body = rect2(5.5, 15.0, 44.5, 42.0, 2.6)
+    outer = Path()                                           # ручка: верхние углы r=2.4, низ прямой и уходит в корпус
+    x0, x1, y0, y1, r = 17.5, 32.5, 7.0, 16.0, 2.4; k = 0.5523
+    outer.moveTo(x0, y1); outer.lineTo(x0, y0 + r); outer.cubicTo(x0, y0 + r - k * r, x0 + r - k * r, y0, x0 + r, y0)
+    outer.lineTo(x1 - r, y0); outer.cubicTo(x1 - r + k * r, y0, x1, y0 + r - k * r, x1, y0 + r); outer.lineTo(x1, y1); outer.close()
+    handle = diff(outer, rect2(21.0, 10.5, 29.0, 16.5))
+    band = Path()
+    band.moveTo(5.0, 24.0); band.quadTo(25.0, 33.5, 45.0, 24.0); band.lineTo(45.0, 27.6)
+    band.quadTo(25.0, 37.1, 5.0, 27.6); band.close()
+    return union(diff(body, band, circle(25.0, 22.4, 2.0)), handle)
+
+def sun2():
+    """Солнце того же размера, лучи — прямоугольники с острыми углами."""
+    cx, cy, k = 25.0, 24.35, 2.0
+    parts = [circle(cx, cy, 5.0 * k)]
+    for j in range(8):
+        a = math.radians(j * 45)
+        r0, r1 = 7.8 * k - k, 9.0 * k + k                    # та же длина, что у капсул вместе с круглыми концами
+        parts.append(stroke(line_path([(cx + r0 * math.cos(a), cy + r0 * math.sin(a)),
+                                       (cx + r1 * math.cos(a), cy + r1 * math.sin(a))]), 2.0 * k, cap="butt"))
+    return union(*parts)
+
+def logistics_boxes(w=3.6, R=4.5):
+    """По примеру replace: два груза-квадрата по диагонали и два встречных Г-образных пути.
+    Квадраты со скруглёнными углами, пути с прямыми концами и острым наконечником."""
+    box = rect2(LEFT, TOP, LEFT + 14.5, TOP + 14.5, 2.6)
+    yc = TOP + 7.25
+    # путь: снизу вверх по x=39, поворот налево по дуге R, влево к наконечнику
+    x = 39.0
+    pts = [(x, 25.2), (x, yc + R)] + arc_pts((x - R, yc + R), R, 0, -90)[1:] + [(27.2, yc)]
+    path = stroke(line_path(pts), w, cap="butt", join="round")
+    head = poly((21.6, yc), (27.6, yc - 5.0), (27.6, yc + 5.0))
+    half = union(box, path, head)
+    return union(half, rot180(half, (25.0, (TOP + BASE) / 2)))
 
 # ── сборка ─────────────────────────────────────────────────────────────────────
 

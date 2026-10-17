@@ -19,14 +19,16 @@ SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
         "2888:677"}                                     # старое «Участие» убрано из набора
 
 REBUILT = {   # узел → функция новой версии
-    "4254:1269": lambda: I.investments3(theta=20, s=0.88, tip=(46, 9.8)),
-    "4254:3107": I.tourism2, "2888:570": I.logistics_route,
-    "2892:607": I.central_park3, "2892:571": lambda: I.city3("B"), "2888:583": I.construction_plain,
-    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church2,
-    "2891:614": I.hotel, "2888:632": I.coworking, "2888:612": I.rocket, "2892:626": I.kite,
-    "4254:3191": I.scales, "2891:591": I.glider, "4254:3005": I.truck_slanted, "2888:639": I.mentors,
-    "2888:616": I.career, "2888:643": I.initiatives, "4254:3189": I.sun,
+    "4254:1269": I.investments5,
+    "4254:3107": I.tourism2, "2888:570": I.logistics_boxes,
+    "2892:607": I.central_park4, "2892:571": lambda: I.city4("C1"), "2888:583": I.construction_plain,
+    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church3,
+    "2891:614": I.hotel2, "2888:632": I.coworking, "2888:612": I.rocket2, "2892:626": I.kite,
+    "4254:3191": I.scales, "2891:591": I.glider_b, "4254:3005": I.truck_solid, "2888:639": I.mentors_sparkle2,
+    "2888:616": I.career2, "2888:643": I.initiatives2, "4254:3189": I.sun2,
 }
+NEW = [("new:farm", "Ферма", I.farm)]                     # новые иконки — компонентов в Фигме ещё нет
+FILL = {"2891:591"}        # планёр по диагонали: вписать по большей стороне в 42, по центру
 LEFT_CUT = {"2888:612"}    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
 RENAME = {"4254:3193": "Участие",                     # две ладошки — это «Участие»
           "2888:677": "Участие · старый вариант"}
@@ -54,6 +56,9 @@ def place(node, p):
         if FULL[node] is None: return 1.0, 0.0, 0.0, "как построено"
         t, b = FULL[node]; s = (b - t) / h
         return s, 25 - s * (x0 + x1) / 2, b - s * y1, "по высоте поля"
+    if node in FILL:
+        s = (RIGHT - LEFT) / max(w, h)
+        return s, 25 - s * (x0 + x1) / 2, 25 - s * (y0 + y1) / 2, "вписан по большей стороне"
     if node in LEFT_CUT:
         s = min(39.1 / h, (RIGHT - LEFT) / w)
         return s, LEFT - s * x0, BASE - s * y1, "срез по левой направляющей"
@@ -69,11 +74,8 @@ def place(node, p):
     return s, dx, dy, f"плотность {f:.2f}"
 
 VARIANTS = {   # узел → дополнительные варианты для страницы (в пак не идут)
-    "4254:1269": [("investments-flat", lambda: I.investments3(theta=0, s=0.649, tip=(46, 23.0), clip=False), "float")],
-    "2892:571": [("city-a", lambda: I.city3("A"), None)],
-    "2891:591": [("glider-orig", I.glider_original_diag, None)],
-    "2888:570": [("logistics-hub", I.logistics_hub, "ground")],
-    "2888:639": [("mentors-sparkle", I.mentors_sparkle, None)],
+    "2892:571": [("city-c2", lambda: I.city4("C2"), None)],
+    "2888:570": [("logistics-route", I.logistics_route2, "float")],
 }
 
 def variant_place(node, mode, p):
@@ -87,16 +89,17 @@ def variant_place(node, mode, p):
 def main():
     out = os.path.join(HERE, "build/pack"); os.makedirs(out, exist_ok=True)
     meta = []
-    for node, v in I.SRC.items():
-        if node in SKIP: continue
-        p = REBUILT[node]() if node in REBUILT else I.src_path(node)
+    items = [(node, v["name"], None) for node, v in I.SRC.items() if node not in SKIP] + NEW
+    for node, name0, fn in items:
+        v = {"name": name0}
+        p = fn() if fn else (REBUILT[node]() if node in REBUILT else I.src_path(node))
         s, dx, dy, note = place(node, p)
         q = tf(p, (s, 0, 0, s, dx, dy))
         name = RENAME.get(node, v["name"].replace("Иконки/", ""))
         slug = node.replace(":", "-")
         open(os.path.join(out, f"{slug}.svg"), "w").write(svg(q))
         b = q.bounds
-        meta.append(dict(node=node, name=name, old=v["name"], rebuilt=node in REBUILT, scale=round(s, 4),
+        meta.append(dict(node=node, name=name, old=v["name"], rebuilt=node in REBUILT or fn is not None, new=fn is not None, scale=round(s, 4),
                          dx=round(dx, 3), dy=round(dy, 3), bounds=[round(x, 2) for x in b], note=note,
                          float=node in FLOAT))
         print(f"{name[:34]:36s} s={s:.3f}  x {b[0]:5.2f}…{b[2]:5.2f}  y {b[1]:5.2f}…{b[3]:5.2f}  {note}")
