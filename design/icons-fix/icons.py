@@ -591,6 +591,39 @@ def tourism2(Lp=15.0, span=17.0, gap=0.9, wing_w=32.86, plane_dx=0.0):
     wings = diff(wings, dilate(plane, gap, join="miter"))       # полосы уходят под самолётик
     return union(wings, plane)
 
+def airplane2(nose_x, cy, Lp=16.0, span=21.0, tspan=7.0, f=1.35, chord=0.17, sweep=0.24, straight=False):
+    """Самолётик сверху, нос вправо. Крылья и стабилизатор — ровные: передняя и задняя кромки
+    параллельны (хорда постоянная), законцовки параллельны фюзеляжу. straight=True — крыло без стреловидности."""
+    x0 = nose_x - Lp
+    X = lambda u: x0 + u * Lp
+    body = union(rect2(X(0.0), cy - f, nose_x - f * 1.6, cy + f),
+                 poly((nose_x - f * 1.6, cy - f), (nose_x - f * 0.35, cy - f * 0.55), (nose_x, cy),
+                      (nose_x - f * 0.35, cy + f * 0.55), (nose_x - f * 1.6, cy + f)))
+    parts = [body]
+    sw = 0.0 if straight else sweep
+    a = 0.64 if not straight else 0.56                       # передняя кромка у корня
+    for sg in (-1, 1):
+        parts.append(poly((X(a), cy), (X(a - sw), cy + sg * span / 2), (X(a - sw - chord), cy + sg * span / 2),
+                          (X(a - chord), cy)))
+        ts = 0.0 if straight else sweep * 0.5
+        parts.append(poly((X(0.17), cy), (X(0.17 - ts), cy + sg * tspan / 2), (X(0.17 - ts - 0.11), cy + sg * tspan / 2),
+                          (X(0.06), cy)))
+    return union(*parts)
+
+def tourism4(Lp=16.0, span=21.0, gap=0.9, wing_w=32.86, straight=False):
+    """Туризм: полосы из знака, самолётик крупнее (по вертикали) с ровными крыльями;
+    полосы обрезаны одной вертикальной линией перед хвостом самолёта."""
+    s = wing_w / (75.0 - 21.11)
+    h = (60.62419 - 1.42019) * s
+    y0 = (TOP + BASE) / 2 - h / 2
+    m = (-s, 0, 0, s, LEFT + 75.0 * s, y0 - 1.42019 * s)
+    wings = tf(logo_wings(), m)
+    cy = y0 + ((27.5161 + 33.685) / 2 - 1.42019) * s
+    plane = airplane2(RIGHT, cy, Lp, span, straight=straight)
+    tail = plane.bounds[0]
+    wings = diff(wings, rect2(tail - gap - 0.4, -10, 60, 60), dilate(plane, gap, join="miter"))   # ровный вертикальный срез
+    return union(wings, plane)
+
 # ── Логистика v2: две обычные стрелки ⇄ ────────────────────────────────────────
 
 def logistics2(t=5.0, hb=14.5, hl=11.0, y1=17.0, y2=33.1):
@@ -1083,6 +1116,23 @@ def hotel2():
     h = hotel()
     eaves = union(rect2(0, 15.0, 7.976, 21.0), rect2(42.018, 15.0, 50, 21.0))
     return diff(h, eaves)
+
+def hotel3():
+    """Гостиница: крыша отделена от стен сплошным просветом — он проходит насквозь до краёв,
+    торцы кровли срезаны вертикально по стенам (без тонкой перемычки в углу); низ — одна ровная линия
+    без выступов у двери."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2891:614"]["svg"])
+    roof, body = P(ds[0]), P(ds[1])
+    yb = 41.0547
+    body = union(body, rect2(20.6, 32.0, 29.4, yb))
+    body = diff(body, rect2(22.23, 32.04, 27.77, 45.0))
+    h = union(roof, body)
+    h = diff(h, rect2(0, 15.0, 7.976, 21.0), rect2(42.018, 15.0, 50, 21.0),            # без свесов
+             poly((7.0, 17.9346), (43.0, 17.9346), (43.0, 19.0264), (7.0, 19.1045)))    # просвет под фронтоном насквозь
+    h = union(h, rect2(7.976, 28.85, 42.018, 30.0))                                      # межэтажная линия —
+    h = diff(h, rect2(7.976 + 1.3, 28.89, 42.018 - 1.3, 29.97))                          # не до самого края, без волосков
+    return inter(h, rect2(0, 0, 50, yb))
 
 def initiatives2():
     """Лампочка крупнее (k 1.12 → 1.4), цоколь по-прежнему над ладонью."""
@@ -2016,6 +2066,17 @@ def central_park7(halo=0.7, cw=14.8, gap_above=1.4, tx=7.74):
     trees = diff(trees, dilate(pav, halo, join="miter"))
     return union(pav, trees)
 
+def central_park8(halo=0.7, cw=16.0, tx=8.6, trunk_vis=1.8):
+    """Центральный парк проще: ротонда — кровля, три одинаковых столба и цоколь; за ней два дерева
+    пака покрупнее — кроны над кровлей, короткий ствол уходит за кровлю (тонких «стволов-столбов» больше нет)."""
+    k = cw / RES_W
+    pav = rotunda()
+    roof_top = pav.bounds[1]
+    top = roof_top - trunk_vis - (30.0 - RES_TOP) * k
+    trees = union(*[tree(x, top, cw, roof_top + 2.0) for x in (25 - tx, 25 + tx)])
+    trees = diff(trees, dilate(pav, halo, join="miter"))
+    return union(pav, trees)
+
 def public_spaces2(halo=0.7):
     """Общественные пространства: скамейка исходная, дерево — дерево пака на месте прежнего."""
     import re
@@ -2039,6 +2100,26 @@ def green_city2(halo=0.7):
     t = tree(21.1, 8.58, 28.0)
     return union(houses, diff(t, dilate(houses, halo, join="miter")))
 
+def green_city3(halo=0.7, top=8.0, cw=28.0):
+    """Город парков: крона дерева срезана одной ровной горизонталью над домами (на просвет halo
+    от верха самого высокого дома), ствол идёт вниз между домами до земли."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2891:595"]["svg"])
+    houses = []
+    for d in ds[:2]:
+        subs = ["M" + x for x in d.split("M") if x.strip()]
+        body = P(subs[0]); wins = []
+        for w_ in subs[1:]:
+            x0, y0, x1, y1 = P(w_).bounds; cx_, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
+            wins.append(rect2(cx_ - 0.75, cy_ - 0.88, cx_ + 0.75, cy_ + 0.88))
+        houses.append(diff(body, *wins))
+    houses = union(*houses)
+    y_cut = houses.bounds[1] - halo
+    cx = 21.1; t = tree(cx, top, cw); tw = 1.88 * cw / RES_W
+    crown = inter(t, rect2(-10, -10, 60, y_cut))
+    trunk = inter(t, rect2(cx - tw, y_cut - 1.0, cx + tw, BASE))
+    return union(houses, crown, trunk)
+
 def machinists_park2():
     """Парк Машиностроителей: холмы и дорожка исходные, деревья — деревья пака на прежних местах."""
     import re
@@ -2052,6 +2133,30 @@ def machinists_park2():
         hills = union(hills, poly((xa, top_y(xa)), (xb, top_y(xb)), (xb, BASE), (xa, BASE)))
     steps = union(*[P(d) for d in ds[2:]])
     trees = union(tree(12.95, 14.0, 17.5, 38.0), tree(37.05, 14.0, 17.5, 38.0))
+    return union(hills, trees, steps)
+
+def _hermite_cut(p0, s0, p1, s1, n=24):
+    """Многоугольник «всё выше плавной кривой» на отрезке x0…x1: кривая — кубический Эрмит
+    из p0 с наклоном s0 в p1 с наклоном s1 (продолжает исходный склон под старым стволом)."""
+    (x0, y0), (x1, y1) = p0, p1; L = x1 - x0; pts = []
+    for i in range(n + 1):
+        t = i / n; h00, h10, h01, h11 = 2*t**3 - 3*t**2 + 1, t**3 - 2*t**2 + t, -2*t**3 + 3*t**2, t**3 - t**2
+        pts.append((x0 + L * t, h00 * y0 + h10 * L * s0 + h01 * y1 + h11 * L * s1))
+    return poly(*pts, (x1, -5.0), (x0, -5.0))
+
+def machinists_park3(tree_w=17.5, tree_top=14.0):
+    """Парк Машиностроителей: холмы, аллея и ступени — исходные, точка в точку.
+    Со старых деревьев снято только то, что выше склона: кроны (всё выше y 33,6) и стволы
+    (над плавным продолжением склона между точками, где ствол стоял). Деревья — деревья пака,
+    ствол уходит в холм, поэтому у основания нет ни ступенек, ни квадратиков."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3118"]["svg"])
+    outer = [P("M" + [x for x in d.split("M") if x.strip()][0]) for d in ds[:2]]
+    hills = diff(union(*outer), rect2(-5, -5, 55, 33.6),
+                 _hermite_cut((10.6562, 39.0228), -0.444, (14.6836, 37.6849), -0.4516),   # левый ствол
+                 _hermite_cut((35.2881, 37.6839), 0.4556, (39.3174, 39.0179), 0.445))     # правый ствол
+    steps = union(*[P(d) for d in ds[2:]])
+    trees = union(tree(12.7, tree_top, tree_w, 40.6), tree(37.3, tree_top, tree_w, 40.6))
     return union(hills, trees, steps)
 
 def rest_base4(halo=0.7):
@@ -2135,12 +2240,52 @@ def participation3(w=2.2, g=1.3, off=(2.7, -5.8)):
     back = move(diff(sil, inner), *off)                      # контурная ладонь — та же форма
     return union(front, drop_small(diff(back, dilate(front, g)), 2.5))
 
+def closing(p, r):
+    """Морфологическое закрытие: заливает щели и выемки уже 2r."""
+    return erode(dilate(p, r), r)
+
+def participation4(w=2.2, g=1.3, off=(2.7, -5.8), rc=3.0):
+    """Участие: передняя ладонь залитая, задняя — та же ладонь контуром. Задняя отрезается не по
+    каждому пальцу передней, а по её общему силуэту (щели между пальцами закрыты), поэтому
+    контур задней ладони идёт целыми дугами без зубчиков; обрывки мизинца слева убраны."""
+    import re
+    d = re.findall(r' d="([^"]+)"', SRC["4254:3193"]["svg"])[0]
+    subs = ["M" + x for x in d.split("M") if x.strip()]
+    inner = P(subs[1])
+    front = dilate(inner, (w - g) / 2)
+    back = move(diff(dilate(inner, w), inner), *off)
+    back = diff(back, dilate(closing(front, rc), g))
+    pieces = []
+    for c in back.contours:
+        q = Path(); c.draw(q.getPen()); x0, y0, x1, y1 = q.bounds
+        pieces.append(((x1 - x0) * (y1 - y0), q))
+    big = max(a for a, _ in pieces)
+    return union(front, *[q for a, q in pieces if a >= 0.5 * big])     # только цельный контур задней ладони
+
 def forest2(halo=0.9):
     """Лес с елями: все три ели — одна и та же ель пака (средняя ель исходника);
     боковые меньше, на прежних местах, за средней с просветом halo."""
     mid = fir_at(24.97, 11.09, 32.0)
     sides = union(fir_at(12.3, 15.7, 27.39), fir_at(37.71, 15.7, 27.39))
     return union(mid, diff(sides, dilate(mid, halo)))
+
+def forest3(halo=0.9, side_dx=0.0):
+    """Лес с елями: три одинаковые ели пака. Задние отрезаются не по ярусам передней, а по её
+    общему силуэту (выпуклая оболочка + просвет halo): передняя ель видна целиком со своим
+    контуром, ярусы задних ровно уходят под неё, в выемках между ярусами — чистый фон."""
+    mid = fir_at(24.97, 11.09, 32.0)
+    sides = union(fir_at(12.3 - side_dx, 15.7, 27.39), fir_at(37.71 + side_dx, 15.7, 27.39))
+    return union(mid, diff(sides, dilate(convex_hull(mid), halo)))
+
+def forest4(halo=0.9, d=1.5, y_top=None, y_bot=35.8):
+    """Лес с елями: задние ели объединены «квадратом» за передней — второй ярус каждой задней
+    ели уходит под переднюю, ниже между ними сплошной фон; передняя ель видна целиком,
+    обведённая просветом halo."""
+    mid = fir_at(24.97, 11.09, 32.0)
+    L, R = fir_at(12.3 + d, 15.7, 27.39), fir_at(37.71 - d, 15.7, 27.39)
+    if y_top is None: y_top = 15.7 + 27.39 * (27.22 - 15.7) / 27.39       # низ второго яруса задней ели
+    back = union(L, R, rect2(12.3 + d, y_top, 37.71 - d, y_bot))
+    return union(mid, diff(back, dilate(mid, halo)))
 
 def lift(p, y_cut, dy):
     """Поднять всё выше y_cut на dy, промежуток залить сечением по y_cut (окна и проёмы тянутся)."""
@@ -2160,6 +2305,53 @@ def lift(p, y_cut, dy):
             band = union(band, r) if len(list(band.contours)) else r; run = None
     return union(up, low, band)
 
+def widen(p, x_cut, dx):
+    """Раздвинуть по горизонтали: всё правее x_cut сдвигается на dx, промежуток заполняется
+    сечением по вертикали x_cut (крыша, днище, окна тянутся; колёса и детали не искажаются)."""
+    sw = lambda q: tf(q, (0, 1, 1, 0, 0, 0))                    # x ↔ y
+    return sw(lift_down(sw(p), x_cut, dx))
+
+def lift_down(p, y_cut, dy):
+    """Как lift, но сдвигает вниз всё ниже y_cut (для widen после перестановки осей)."""
+    up = inter(p, rect2(-100, -100, 200, y_cut))
+    low = move(inter(p, rect2(-100, y_cut, 200, 200)), 0, dy)
+    import numpy as np
+    xs = np.arange(-100, 200, 0.02); band = Path(); run = None
+    for x in xs:
+        on = _contains(p, x, y_cut)
+        if on and run is None: run = x
+        if not on and run is not None:
+            r = rect2(run, y_cut - 0.05, x, y_cut + dy + 0.05)
+            band = union(band, r) if len(list(band.contours)) else r; run = None
+    return union(up, low, band)
+
+# ── Транспорт круга 11: одна высота, ширина — трактор и поезд по голубым, грузовик и комбайн по красным
+TRANSPORT_H = 27.0
+def _stretch_to(p, x_cuts, aspect):
+    """Раздвинуть иконку по вертикальным разрезам x_cuts (поровну), чтобы ширина/высота = aspect."""
+    x0, y0, x1, y1 = p.bounds
+    need = aspect * (y1 - y0) - (x1 - x0)
+    if need <= 0.01: return p
+    for i, xc in enumerate(sorted(x_cuts, reverse=True)):         # справа налево — разрезы не сдвигаются
+        p = widen(p, xc, need / len(x_cuts))
+    return p
+
+def train3():
+    """Поезд: пропорции исходника уже дают 36,1 при общей высоте — без изменений."""
+    return _stretch_to(src_path("4254:3003"), [17.4, 22.9], (BASE - TOP) / TRANSPORT_H)
+
+def tractor3():
+    """Трактор: удлинён капот (между кабиной и выхлопной трубой) до ширины голубого квадрата."""
+    return _stretch_to(tractor2(), [30.5], (BASE - TOP) / TRANSPORT_H)
+
+def truck3():
+    """Грузовик: удлинён кузов до ширины красных линий."""
+    return _stretch_to(truck_solid2(), [20.0], (RIGHT - LEFT) / TRANSPORT_H)
+
+def combine5():
+    """Комбайн: увеличена средняя часть — корпус и бункер между колёсами — до ширины красных линий."""
+    return _stretch_to(combine3(), [18.5], (RIGHT - LEFT) / TRANSPORT_H)
+
 def _contains(p, x, y):
     try: return p.contains((x, y))
     except Exception: return False
@@ -2174,6 +2366,12 @@ def farm6(gw=1.4):
     вместо дерева — амбар единой формы, отделён от полей тем же просветом, что ствол."""
     f = resource_fields()
     barn = diff(house_form(25.0, 20.0, 15.5, 36.0), rect2(22.0, 22.0, 28.0, 37.0))
+    return union(diff(barn, dilate(f, gw)), f)
+
+def farm7(gw=1.4, wall_w=26.0, wall_top=17.0, door_w=7.0):
+    """Ферма: амбар шире (стены wall_w), дверь пропорционально шире; поля прежние."""
+    f = resource_fields()
+    barn = diff(house_form(25.0, wall_w, wall_top, 36.0), rect2(25.0 - door_w / 2, wall_top + 6.5, 25.0 + door_w / 2, 37.0))
     return union(diff(barn, dilate(f, gw)), f)
 
 def rest_base5(halo=0.7):
@@ -2217,6 +2415,50 @@ def comfort_city4(h=22.0):
     t = diff(t, dilate(houses, h, join="miter"))
     t = union(diff(t, dilate(road, h)), inter(t, rect2(0, 0, 2000, 840)))
     return union(ground, houses, t)
+
+def comfort_city5(h=22.0, cx=795.0, xt=490.0, yg=850.0, gx1=1108.0):
+    """Комфортный город, аккуратно: земля с ровным верхом — все дома стоят на одной горизонтали;
+    главный дом (фронтон с аркой и два крыла) сдвинут вправо, чтобы между ним и левым домиком
+    был виден ствол дерева пака; дорожка выходит из арки и плавно уходит вниз."""
+    gx0, gy1, r = 107.0, 1035.0, 60.0
+    ground = union(rect2(gx0, yg, gx1, gy1, 0), Path())
+    for x_c, sgn in ((gx0 + r, -1), (gx1 - r, 1)):                       # скруглённые верхние углы
+        corner = rect2(min(x_c, x_c + sgn * r), yg, max(x_c, x_c + sgn * r), yg + r)
+        ground = diff(ground, diff(corner, circle(x_c, yg + r, r)))
+    # дорожка: гладкая осевая из арки вниз-влево, ширина растёт от 96 у арки до 330 у нижнего края
+    import math
+    axis = _cr_fn([(cx, 790.0), (cx, 866.0), (cx - 70.0, 925.0), (cx - 190.0, 985.0), (cx - 235.0, 1045.0), (cx - 240.0, 1090.0)])
+    L_, R_ = [], []
+    n = 80
+    for i in range(n + 1):
+        t = i / n; x, y = axis(t); x2, y2 = axis(min(1, t + 1e-3)); x1_, y1_ = axis(max(0, t - 1e-3))
+        tx, ty = x2 - x1_, y2 - y1_; ln = math.hypot(tx, ty); nx, ny = -ty / ln, tx / ln
+        w = 48.0 + 117.0 * max(0.0, (y - 866.0) / (1090.0 - 866.0)) ** 1.3
+        L_.append((x + nx * w, y + ny * w)); R_.append((x - nx * w, y - ny * w))
+    road = union(poly(*(L_ + R_[::-1])), Path())
+    ground_solid = ground
+    ground = diff(ground, road)
+    left = diff(house_form(275.0, 260.0, 695.0, 1000.0), rect2(196, 712, 255, 772), rect2(293, 712, 352, 772))
+    center = house_form(cx, 265.0, 597.0, 1000.0)
+    wing_w, wing_top = 120.0, 690.0
+    wings = union(rect2(cx - 132.5 - wing_w, wing_top, cx - 132.5 + 1, 1000.0), rect2(cx + 132.5 - 1, wing_top, cx + 132.5 + wing_w, 1000.0))
+    main = union(center, wings)
+    arch = union(rect2(cx - 75.5, 736.0, cx + 75.5, 1100.0), circle(cx, 736.0, 75.5))
+    wwin = lambda x: rect2(x - 29, 725, x + 29, 787)
+    main = diff(main, rect2(cx - 28.5, 520.0, cx + 28.5, 580.0), arch, wwin(cx - 132.5 - wing_w / 2), wwin(cx + 132.5 + wing_w / 2))
+    houses = diff(union(left, main), rect2(0, yg - h, 2000, 2000))
+    t = tree(xt, 185.0, 485.0, yg - h, slit_min=0)
+    t = diff(t, dilate(houses, h, join="miter"))
+    return union(ground, houses, t)
+
+def investments_traced():
+    """Инвестиции — ваш рисунок, обведённый вектором один в один (potrace по src/drawings/investments.png);
+    правка только у рамки: левый и нижний срезы выпрямлены."""
+    import trace as T
+    d, _ = T.trace_png(os.path.join(os.path.dirname(os.path.abspath(__file__)), "src/drawings/investments.png"))
+    p = P(d); p.fillType = pathops.FillType.EVEN_ODD; p = union(p, Path())
+    x0, y0, x1, y1 = p.bounds
+    return inter(p, rect2(x0 + 1.5, y0 - 5, x1 + 5, y1 - 1.5))
 
 def resource_fields():
     """Поля из нашей иконки «Богатые природные ресурсы» (2888:587) — как есть, без дерева."""
