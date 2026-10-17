@@ -1944,20 +1944,27 @@ def _res_tree_raw():
 
 RES_TRUNK_X, RES_TOP, RES_W = 25.02, 6.36, 31.24
 
-def tree(cx, top, crown_w, bottom=BASE, slit_min=0.7):
+_SLITS = None
+def _res_slits():
+    """Прорези эталонного дерева (ромб и две ветки) — находятся один раз на дереве в натуральную величину."""
+    global _SLITS
+    if _SLITS is None:
+        t = _res_tree_raw(); r = 1.2
+        sl = inter(diff(erode(dilate(t, r), r), t), rect2(18.0, 15.0, 32.0, 30.5))
+        _SLITS = drop_small(sl, 0.5)
+    return _SLITS
+
+def tree(cx, top, crown_w, bottom=BASE, slit_min=0.75):
     """Дерево пака: эталонное дерево, крона шириной crown_w, верх кроны top, ствол до bottom.
-    При уменьшении прорези веток и ромб расширяются до slit_min, чтобы не превращаться в волосок."""
+    При уменьшении расширяются только прорези веток и ромб — до slit_min, крона не меняется."""
     k = crown_w / RES_W
-    t = tf(_res_tree_raw(), (k, 0, 0, k, cx - k * RES_TRUNK_X, top - k * RES_TOP))
-    if k < 1.0 and slit_min > 0:
-        r = 0.9
-        notch = diff(erode(dilate(t, r), r), t)
-        zone = rect2(cx - 0.32 * crown_w, top + 0.38 * crown_w * 0.88, cx + 0.32 * crown_w, top + 0.80 * crown_w * 0.88)
-        notch = inter(notch, zone)
-        grow = max(0.0, (slit_min - 0.9 * k) / 2)
-        if grow > 0: t = diff(t, dilate(notch, grow))
+    m = (k, 0, 0, k, cx - k * RES_TRUNK_X, top - k * RES_TOP)
+    t = tf(_res_tree_raw(), m)
+    grow = max(0.0, (slit_min - 0.9 * k) / 2)
+    if grow > 0 and slit_min > 0:
+        t = diff(t, dilate(tf(_res_slits(), m), grow))
     tw = 1.88 * k
-    t = union(t, rect2(cx - tw, top + k * (29.0 - RES_TOP), cx + tw, bottom))
+    t = union(t, rect2(cx - tw, top + k * (31.0 - RES_TOP), cx + tw, bottom))
     return inter(t, rect2(cx - crown_w, top - crown_w, cx + crown_w, bottom))
 
 def fir_shape():
@@ -1981,12 +1988,12 @@ def house_form(cx, wall_w, wall_top, bottom=BASE):
     h = tf(_house_raw(), (k, 0, 0, k, cx - k * 25.01, wall_top - k * 20.43))
     return union(inter(h, rect2(cx - wall_w, wall_top - wall_w, cx + wall_w, bottom)), rect2(cx - wall_w / 2, wall_top + 1, cx + wall_w / 2, bottom))
 
-def rotunda():
+def rotunda(cuts=((16.2, 18.3), (32.9, 35.0))):
     """Ротонда центрального парка (как в круге 7): 2-й и 4-й столбы убраны, концы кровли без крючков."""
     import re
     ds = re.findall(r' d="([^"]+)"', SRC["2892:607"]["svg"])
     pav = P(ds[0]); orig = pav
-    for x0, x1 in ((16.2, 18.3), (32.9, 35.0)):
+    for x0, x1 in cuts:
         pav = diff(pav, rect2(x0, 28.9, x1, 42.2))
         yl, yr = (29.25, 29.15) if x0 < 25 else (29.15, 29.25)
         pav = union(pav, inter(orig, poly((x0, 20), (x1, 20), (x1, yr), (x0, yl))))
@@ -1997,13 +2004,15 @@ def rotunda():
         pav = diff(pav, diff(corner, circle(cx, 29.35, 1.0)))
     return pav
 
-def central_park7(halo=0.7, cw=13.6, gap_above=1.4):
+def central_park7(halo=0.7, cw=14.8, gap_above=1.4, tx=7.74):
     """Центральный парк — горизонтальная иконка: ротонда и два дерева пака (как в «Ресурсах»);
-    стволы — на месте 2-го и 4-го столбов, симметрично; кроны над кровлей."""
-    pav = rotunda()
-    k = cw / RES_W; crown_h = (30.0 - RES_TOP) * k
+    стволы — на месте 2-го и 4-го столбов, симметрично; кроны над кровлей, крупнее."""
+    k = cw / RES_W; tw = 1.88 * k
+    xs = (25 - tx, 25 + tx)
+    pav = rotunda()                                              # стволы — ровно на месте 2-го и 4-го столбов
+    crown_h = (30.0 - RES_TOP) * k
     top = 26.05 - gap_above - crown_h
-    trees = union(*[tree(x, top, cw) for x in (17.26, 32.74)])
+    trees = union(*[tree(x, top, cw) for x in xs])
     trees = diff(trees, dilate(pav, halo, join="miter"))
     return union(pav, trees)
 
@@ -2019,8 +2028,13 @@ def green_city2(halo=0.7):
     import re
     ds = re.findall(r' d="([^"]+)"', SRC["2891:595"]["svg"])
     houses = []
-    for d in ds[:2]:
-        q = P(d); q.fillType = pathops.FillType.EVEN_ODD; houses.append(union(q, Path()))
+    for d in ds[:2]:                                               # дома — исходные силуэты, окна заново: ровные одинаковые
+        subs = ["M" + x for x in d.split("M") if x.strip()]
+        body = P(subs[0]); wins = []
+        for w_ in subs[1:]:
+            x0, y0, x1, y1 = P(w_).bounds; cx_, cy_ = (x0 + x1) / 2, (y0 + y1) / 2
+            wins.append(rect2(cx_ - 0.75, cy_ - 0.88, cx_ + 0.75, cy_ + 0.88))
+        houses.append(diff(body, *wins))
     houses = union(*houses)
     t = tree(21.1, 8.58, 28.0)
     return union(houses, diff(t, dilate(houses, halo, join="miter")))
@@ -2030,7 +2044,12 @@ def machinists_park2():
     import re
     ds = re.findall(r' d="([^"]+)"', SRC["4254:3118"]["svg"])
     outer = [P("M" + [x for x in d.split("M") if x.strip()][0]) for d in ds[:2]]   # только внешние силуэты — без старых прорезей
-    hills = inter(union(*outer), rect2(0, 37.4, 50, 50))
+    # холмы целиком: убираем только старые кроны и стволы (полоса над склоном у каждого ствола)
+    hills = diff(union(*outer), rect2(0, 0, 50, 33.6), rect2(9.0, 33.0, 17.0, 37.9), rect2(33.0, 33.0, 41.0, 37.9))
+    def top_y(x):                                                 # верх склона в точке x
+        col = inter(hills, rect2(x - 0.05, 0, x + 0.05, 50)); return col.bounds[1]
+    for xa, xb in ((8.6, 17.4), (32.6, 41.4)):                    # склон под старым стволом — ровной линией
+        hills = union(hills, poly((xa, top_y(xa)), (xb, top_y(xb)), (xb, BASE), (xa, BASE)))
     steps = union(*[P(d) for d in ds[2:]])
     trees = union(tree(12.95, 14.0, 17.5, 38.0), tree(37.05, 14.0, 17.5, 38.0))
     return union(hills, trees, steps)
@@ -2103,6 +2122,101 @@ def tourism3(k=1.55, Lp=15.0, span=17.0, gap=0.9, wing_w=32.86):
     plane = airplane(RIGHT, cy, Lp, span)
     wings = diff(wings, dilate(plane, gap, join="miter"))
     return union(wings, plane)
+
+def participation3(w=2.2, g=1.3, off=(2.7, -5.8)):
+    """Участие: две одинаковые ладони. Передняя — залитая (пальцы разделены просветом g),
+    задняя — та же ладонь контуром (как прежняя передняя), сдвинута назад-вверх и отделена просветом g."""
+    import re
+    d = re.findall(r' d="([^"]+)"', SRC["4254:3193"]["svg"])[0]
+    subs = ["M" + x for x in d.split("M") if x.strip()]
+    inner = P(subs[1])
+    sil = dilate(inner, w)
+    front = dilate(inner, (w - g) / 2)
+    back = move(diff(sil, inner), *off)                      # контурная ладонь — та же форма
+    return union(front, drop_small(diff(back, dilate(front, g)), 2.5))
+
+def forest2(halo=0.9):
+    """Лес с елями: все три ели — одна и та же ель пака (средняя ель исходника);
+    боковые меньше, на прежних местах, за средней с просветом halo."""
+    mid = fir_at(24.97, 11.09, 32.0)
+    sides = union(fir_at(12.3, 15.7, 27.39), fir_at(37.71, 15.7, 27.39))
+    return union(mid, diff(sides, dilate(mid, halo)))
+
+def lift(p, y_cut, dy):
+    """Поднять всё выше y_cut на dy, промежуток залить сечением по y_cut (окна и проёмы тянутся)."""
+    up = move(inter(p, rect2(-100, -100, 200, y_cut)), 0, -dy)
+    low = inter(p, rect2(-100, y_cut, 200, 200))
+    sec = inter(p, rect2(-100, y_cut - 0.02, 200, y_cut + 0.02))
+    # сечение по линии разреза: чёрные отрезки вдоль y_cut вытягиваются вверх на dy
+    import numpy as np
+    xs = np.arange(-100, 200, 0.02); band = Path(); run = None
+    def inside(x):
+        return sec.bounds and any(True for _ in [0]) and _contains(sec, x, y_cut)
+    for x in xs:
+        on = _contains(sec, x, y_cut)
+        if on and run is None: run = x
+        if not on and run is not None:
+            r = rect2(run, y_cut - dy - 0.05, x, y_cut + 0.05)
+            band = union(band, r) if len(list(band.contours)) else r; run = None
+    return union(up, low, band)
+
+def _contains(p, x, y):
+    try: return p.contains((x, y))
+    except Exception: return False
+
+def combine4(g=1.34, dy=3.5):
+    """Комбайн с корпусом выше: всё выше колёс (корпус, кабина, бункер) поднято на dy,
+    стены и окно кабины вытянуты; колёса, жатка и ковш на месте."""
+    return lift(combine3(g), 24.5, dy)
+
+def farm6(gw=1.4):
+    """Ферма — пара к «Богатым природным ресурсам»: те же поля без изменений,
+    вместо дерева — амбар единой формы, отделён от полей тем же просветом, что ствол."""
+    f = resource_fields()
+    barn = diff(house_form(25.0, 20.0, 15.5, 36.0), rect2(22.0, 22.0, 28.0, 37.0))
+    return union(diff(barn, dilate(f, gw)), f)
+
+def rest_base5(halo=0.7):
+    """База отдыха компактнее: ель ближе к дому — пропорция как у других зданий."""
+    ax = 22.4
+    house = house_form(ax, 22.5, 27.5)
+    pw, mul_ = 2.5, 1.1
+    xl, xr = ax - mul_ / 2 - pw, ax + mul_ / 2
+    holes = [rect2(x, 30.4, x + pw, 34.6) for x in (xl, xr)] + [rect2(ax - 5.1, 34.0, ax + 5.1, 35.15, 0.55)] + \
+            [rect2(x, 36.25, x + pw, 40.15) for x in (xl, xr)]
+    house = diff(house, *holes)
+    fir = fir_at(36.0, 10.5, 32.6)
+    return union(house, diff(fir, dilate(house, halo)))
+
+def comfort_city4(h=22.0):
+    """Комфортный город проще: слева домик и дерево пака, справа одно здание, куда ведёт
+    дорожка, — центральный объём с фронтоном и аркой и два одинаковых крыла по бокам."""
+    top = [(60.0, 905.0), (107.0, 900.0), (160.0, 866.0), (300.0, 842.0), (420.0, 826.0), (560.0, 828.0),
+           (700.0, 842.0), (760.0, 838.0), (900.0, 852.0), (1050.0, 872.0), (1112.0, 892.0), (1148.0, 935.0), (1160.0, 980.0)]
+    ground = union(_cr_path(top, closed_tail=[(1148.0, 1035.0), (107.0, 1035.0)]), Path())
+    ground = inter(ground, rect2(107.0, 0, 1148.0, 1035.0))
+    corner = 46.0
+    ground = diff(ground, diff(rect2(107.0, 860.0, 107.0 + corner, 860.0 + corner), circle(107.0 + corner, 860.0 + corner + 30, corner + 30)))
+    left_e = [(418.0, 1080.0), (418.0, 1035.0), (404.0, 998.0), (440.0, 952.0), (560.0, 904.0), (662.0, 868.0), (678.0, 840.0), (678.0, 790.0)]
+    right_e = [(777.0, 790.0), (777.0, 842.0), (792.0, 876.0), (735.0, 914.0), (692.0, 955.0), (718.0, 996.0), (850.0, 1035.0), (850.0, 1080.0)]
+    road = union(_cr_path(left_e + right_e, closed_tail=[]), Path())
+    ground_solid = ground
+    ground = diff(ground, road)
+    left = diff(house_form(275.0, 260.0, 695.0, 1000.0), rect2(196, 712, 255, 772), rect2(293, 712, 352, 772))
+    cx = 729.5
+    center = house_form(cx, 265.0, 597.0, 1000.0)
+    wing_w, wing_top = 120.0, 690.0
+    wings = union(rect2(cx - 132.5 - wing_w, wing_top, cx - 132.5 + 1, 1000.0), rect2(cx + 132.5 - 1, wing_top, cx + 132.5 + wing_w, 1000.0))
+    main = union(center, wings)
+    arch = union(rect2(652.0, 736.0, 803.0, 1100.0), circle(727.5, 736.0, 75.5))
+    wwin = lambda x: rect2(x - 29, 725, x + 29, 787)
+    main = diff(main, rect2(701.0, 520.0, 758.0, 580.0), arch, wwin(cx - 132.5 - wing_w / 2), wwin(cx + 132.5 + wing_w / 2))
+    houses = union(left, main)
+    houses = diff(houses, dilate(ground_solid, h))
+    t = tree(458.0, 185.0, 485.0, 900.0, slit_min=0)
+    t = diff(t, dilate(houses, h, join="miter"))
+    t = union(diff(t, dilate(road, h)), inter(t, rect2(0, 0, 2000, 840)))
+    return union(ground, houses, t)
 
 def resource_fields():
     """Поля из нашей иконки «Богатые природные ресурсы» (2888:587) — как есть, без дерева."""

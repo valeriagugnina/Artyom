@@ -20,18 +20,18 @@ SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
 
 REBUILT = {   # узел → функция новой версии
     "4254:1269": lambda: I.investments_ref(px=False), "4254:3021": I.elevator2,
-    "4254:3107": I.tourism3, "2888:570": I.logistics_route3,
-    "2892:607": I.central_park7, "2888:599": I.public_spaces2, "2891:595": I.green_city2, "4254:3118": I.machinists_park2, "4254:3193": I.participation2, "2892:571": I.comfort_city3, "2888:583": I.construction_form,
+    "4254:3107": I.tourism2, "2888:570": I.logistics_route3,
+    "2892:607": I.central_park7, "2888:599": I.public_spaces2, "2891:595": I.green_city2, "4254:3118": I.machinists_park2, "4254:3193": I.participation3, "2892:596": I.forest2, "2892:571": I.comfort_city4, "2888:583": I.construction_form,
     "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church5,
     "2891:614": I.hotel2, "2888:612": I.rocket3, "2892:626": I.kite,
     "4254:3191": I.scales2, "2891:591": I.glider_b, "4254:3005": I.truck_solid2, "2888:639": I.mentors4,
     "2888:616": I.career3, "2888:643": I.initiatives4, "4254:3105": I.mutual_help2, "4254:3189": I.sun4,
-    "2891:599": I.sanatorium3, "2892:612": I.park_columns, "4254:3026": I.tractor2, "4254:3023": I.combine3, "2891:608": I.rest_base4,
+    "2891:599": I.sanatorium3, "2892:612": I.park_columns, "4254:3026": I.tractor2, "4254:3023": I.combine3, "2891:608": I.rest_base5,
 }
-SAME_AS = {"4254:3105": "2888:643"}   # ладонь с сердцем ставится в кадр так же, как ладонь с лампочкой
+SAME_AS = {"4254:3105": "2888:643", "new:farm": "2888:587"}   # ладонь с сердцем ставится в кадр так же, как ладонь с лампочкой
 WIDTH_AS = {}   # (монитор вернулся к исходнику)
 HEIGHT_AS = {}
-NEW = [("new:farm", "Ферма", I.farm5)]                     # новые иконки — компонентов в Фигме ещё нет
+NEW = [("new:farm", "Ферма", I.farm6)]                     # новые иконки — компонентов в Фигме ещё нет
 FILL = set()
 TALL_FIT = set()
 TOP_FIT = {}
@@ -49,7 +49,12 @@ FULL = {}                       # Ф2: полосы сверху по напра
 SQ = BASE - TOP        # сторона единого квадрата: 36,1
 HB = 26.0              # общая высота горизонтальных иконок (зелёные линии 12,05 и 38,05)
 VB = 21.0              # общая ширина вертикальных иконок (зелёные линии 14,5 и 35,5)
-H_MIN, V_MAX = 1.18, 0.8
+H_MIN, V_MAX = 1.25, 0.8
+MB = 33.0              # своя сетка массивных форм (оранжевые линии 8,55 и 41,55)
+MASSIVE = {"2888:620", "2891:586", "4254:3019", "2888:673", "2888:660", "4254:3189", "4254:3110"}
+TRANSPORT = {"4254:3005": 999, "4254:3003": 999, "4254:3026": 999, "4254:3023": 39.0}   # граница корпуса по x (без жатки)
+EAVES = {"2888:578"}                                          # склад: свесы со скруглёнными концами
+FORCE_SQUARE = {"2891:579", "2891:608"}                       # Колмаков, база отдыха — в квадратный класс
 HW_MAX = 38.0          # широкие с косыми/круглыми боками могут чуть выйти за голубой
 A_TARGET = 1300.0     # (прежнее правило по площади — не используется)
 F_REF = 0.5           # эталонная плотность заливки
@@ -65,7 +70,7 @@ _cache = {}
 def place(node, p):
     if node in SAME_AS:
         ref = SAME_AS[node]
-        if ref not in _cache: _cache[ref] = place(ref, REBUILT[ref]())
+        if ref not in _cache: _cache[ref] = place(ref, REBUILT[ref]() if ref in REBUILT else I.src_path(ref))
         return _cache[ref][:3] + ("как у " + ref,)
     if node in WIDTH_AS:
         ref = WIDTH_AS[node]
@@ -104,6 +109,21 @@ def place(node, p):
     # Прямые края стоят на голубом, круглые и острые выходят до красного (4 и 46):
     # круги — в квадрат 42; острая или круглая верхушка — вверх до 4, плоский низ — на базе.
     a = w / h; cyc = (TOP + BASE) / 2
+    if node in MASSIVE:                                           # массивные — своя сетка, квадрат MB
+        s = MB / max(w, h) * (1.04 if node in ROUND else 1.0)
+        return s, 25 - s * (x0 + x1) / 2, cyc - s * (y0 + y1) / 2, "массивная" + (" · круг" if node in ROUND else "")
+    if node in TRANSPORT:                                         # транспорт — корпус по ширине голубого квадрата
+        mx0, _, mx1, _ = inter(p, rect2(-100, -100, TRANSPORT[node], 200)).bounds
+        s = SQ / (mx1 - mx0); dx = 25 - s * (mx0 + mx1) / 2
+        if dx + s * x1 > RIGHT:                                    # навесное (жатка) — не дальше красной
+            s = (RIGHT - (25 - SQ / 2)) / (x1 - mx0); dx = (25 - SQ / 2) - s * mx0
+        return s, dx, cyc - s * (y0 + y1) / 2, "транспорт · корпус от голубой"
+    if node in EAVES:                                             # свесы кровли — до красного, стены внутри
+        s = min((RIGHT - LEFT) / w, SQ / h)
+        return s, 25 - s * (x0 + x1) / 2, cyc - s * (y0 + y1) / 2, "квадратная · свесы до красного"
+    if node in FORCE_SQUARE:
+        s = SQ / max(w, h)
+        return s, 25 - s * (x0 + x1) / 2, cyc - s * (y0 + y1) / 2, "квадратная"
     if node in ROUND:
         s = min(42.0 / w, 42.0 / h); cls = "круг · до красной"
         return s, 25 - s * (x0 + x1) / 2, cyc - s * (y0 + y1) / 2, cls
