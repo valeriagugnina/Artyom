@@ -20,16 +20,20 @@ SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
 
 REBUILT = {   # узел → функция новой версии
     "4254:1269": I.investments5,
-    "4254:3107": I.tourism2, "2888:570": I.logistics_boxes,
-    "2892:607": I.central_park4, "2892:571": lambda: I.city4("C1"), "2888:583": I.construction_plain,
-    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church3,
-    "2891:614": I.hotel2, "2888:632": I.coworking, "2888:612": I.rocket2, "2892:626": I.kite,
-    "4254:3191": I.scales, "2891:591": I.glider_b, "4254:3005": I.truck_solid, "2888:639": I.mentors_sparkle2,
-    "2888:616": I.career2, "2888:643": I.initiatives2, "4254:3189": I.sun2,
+    "4254:3107": I.tourism2, "2888:570": I.logistics_route3,
+    "2892:607": I.central_park5, "2888:583": I.construction_plain,
+    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church4,
+    "2891:614": I.hotel2, "2888:632": I.coworking2, "2888:612": I.rocket3, "2892:626": I.kite,
+    "4254:3191": I.scales, "2891:591": I.glider_b, "4254:3005": I.truck_solid2, "2888:639": I.mentors3,
+    "2888:616": I.career2, "2888:643": I.initiatives3, "4254:3105": I.mutual_help, "4254:3189": I.sun3,
+    "4254:1272": I.capital,
 }
-NEW = [("new:farm", "Ферма", I.farm)]                     # новые иконки — компонентов в Фигме ещё нет
+SAME_AS = {"4254:3105": "2888:643"}   # ладонь с сердцем ставится в кадр так же, как ладонь с лампочкой
+WIDTH_AS = {"2888:632": "2888:616"}   # монитор шириной с портфель
+NEW = [("new:farm", "Ферма", I.farm3)]                     # новые иконки — компонентов в Фигме ещё нет
 FILL = {"2891:591"}        # планёр по диагонали: вписать по большей стороне в 42, по центру
-LEFT_CUT = {"2888:612"}    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
+TALL_FIT = {"2888:612"}    # ракета: во всю высоту 4…43,1, по центру, низ на базе
+LEFT_CUT = set()    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
 RENAME = {"4254:3193": "Участие",                     # две ладошки — это «Участие»
           "2888:677": "Участие · старый вариант"}
 
@@ -50,7 +54,18 @@ def ink_ratio(p):
     a = np.array(Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg_.encode()))).convert("RGBA"))[..., 3]
     return float((a > 127).mean())
 
+_cache = {}
 def place(node, p):
+    if node in SAME_AS:
+        ref = SAME_AS[node]
+        if ref not in _cache: _cache[ref] = place(ref, REBUILT[ref]())
+        return _cache[ref][:3] + ("как у " + ref,)
+    if node in WIDTH_AS:
+        ref = WIDTH_AS[node]
+        if ref not in _cache: _cache[ref] = place(ref, REBUILT[ref]())
+        rp = REBUILT[ref](); rw = (rp.bounds[2] - rp.bounds[0]) * _cache[ref][0]
+        x0, y0, x1, y1 = p.bounds; s = rw / (x1 - x0)
+        return s, 25 - s * (x0 + x1) / 2, BASE - s * y1, "шириной как " + ref
     x0, y0, x1, y1 = p.bounds; w, h = x1 - x0, y1 - y0
     if node in FULL:
         if FULL[node] is None: return 1.0, 0.0, 0.0, "как построено"
@@ -59,6 +74,9 @@ def place(node, p):
     if node in FILL:
         s = (RIGHT - LEFT) / max(w, h)
         return s, 25 - s * (x0 + x1) / 2, 25 - s * (y0 + y1) / 2, "вписан по большей стороне"
+    if node in TALL_FIT:
+        s = min(39.1 / h, (RIGHT - LEFT) / w)
+        return s, 25 - s * (x0 + x1) / 2, BASE - s * y1, "во всю высоту поля"
     if node in LEFT_CUT:
         s = min(39.1 / h, (RIGHT - LEFT) / w)
         return s, LEFT - s * x0, BASE - s * y1, "срез по левой направляющей"
@@ -74,8 +92,7 @@ def place(node, p):
     return s, dx, dy, f"плотность {f:.2f}"
 
 VARIANTS = {   # узел → дополнительные варианты для страницы (в пак не идут)
-    "2892:571": [("city-c2", lambda: I.city4("C2"), None)],
-    "2888:570": [("logistics-route", I.logistics_route2, "float")],
+
 }
 
 def variant_place(node, mode, p):

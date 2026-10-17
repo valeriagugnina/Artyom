@@ -1303,6 +1303,226 @@ def logistics_boxes(w=3.6, R=4.5):
     half = union(box, path, head)
     return union(half, rot180(half, (25.0, (TOP + BASE) / 2)))
 
+# ── круг 6 ───────────────────────────────────────────────────────────────────
+
+ARROW_K = 0.65            # единая стрелка пака: сплошной треугольник, полуширина = 0.65 длины
+
+def arrow_head(tip, d, L):
+    """Единый наконечник: острый треугольник длиной L по направлению d."""
+    d = norm(d); n = perp(d); b = sub(tip, mul(d, L))
+    return poly(tip, add(b, mul(n, L * ARROW_K)), sub(b, mul(n, L * ARROW_K)))
+
+def logistics_route3(w=3.6, r_pt=4.4, R=7.5, L=7.6, gap=1.6):
+    """Маршрут: точки отделены от путей просветом, пути с прямыми концами и мягким
+    поворотом, наконечник — единая стрелка пака."""
+    p0 = (10.5, 37.5); y_h = 12.5
+    start = (p0[0], p0[1] - r_pt - gap)
+    tip = (50 - p0[0] - r_pt - gap - 0.4, y_h)                # остриё не доходит до второй точки на просвет
+    base = (tip[0] - L, y_h)
+    pts = [start, (p0[0], y_h + R)] + arc_pts((p0[0] + R, y_h + R), R, 180, 270)[1:] + [(base[0] + 0.3, y_h)]
+    half = union(stroke(line_path(pts), w, cap="butt", join="round"), arrow_head(tip, (1, 0), L), circle(*p0, r_pt))
+    return union(half, rot180(half, (25.0, 25.0)))
+
+def farm2(w=3.4, gap=1.6):
+    """Ферма: правые поля заканчиваются прямым срезом поперёк полосы, на ровном
+    просвете от левых — а не обрезаны по кривой."""
+    C = (4.0, 66.0); bands = []
+    for y0 in (27.0, 32.6, 38.2):
+        R = C[1] - y0
+        bands.append(stroke(line_path([(C[0] + R * math.cos(math.radians(t)), C[1] - R * math.sin(math.radians(t)))
+                                       for t in [91 - 41 * k / 40 for k in range(41)]]), w, cap="butt", join="round"))
+    left = union(*bands)
+    lpts = contour_points(left, 0.2)
+    C2 = (46.0, 70.0); right = []
+    for y0 in (32.6, 38.2):
+        R = C2[1] - y0
+        pts = []
+        for k in range(200):
+            t = 91 - 40 * k / 199
+            q = (C2[0] - R * math.cos(math.radians(t)), C2[1] - R * math.sin(math.radians(t)))
+            if min(math.dist(q, z) for z in lpts[::3]) < w / 2 + gap + 0.6: break
+            pts.append(q)
+        if len(pts) > 2: right.append(stroke(line_path(pts), w, cap="butt", join="round"))
+    fields = canvas_clip(union(left, *right), x0=LEFT, x1=RIGHT)
+    barn = poly((14.0, 14.5), (25.0, 6.0), (36.0, 14.5), (36.0, 30.0), (14.0, 30.0))
+    barn = diff(barn, rect2(21.5, 19.0, 28.5, 30.1))
+    return union(diff(barn, dilate(fields, gap)), fields)
+
+def resource_fields():
+    """Поля из нашей иконки «Богатые природные ресурсы» (2888:587) — как есть, без дерева."""
+    src = src_path("2888:587"); out = []
+    for c in src.contours:
+        if c.bounds[1] > 30:
+            q = Path(); c.draw(q.getPen()); out.append(q)
+    return union(*out)
+
+def farm3(gap=1.4):
+    """Ферма на наших полях: поля взяты из «Богатых природных ресурсов» без изменений,
+    вместо дерева — амбар. Амбар отделён от полей тем же просветом, что и ствол дерева."""
+    f = resource_fields()
+    barn = poly((13.5, 17.5), (25.0, 8.0), (36.5, 17.5), (36.5, 40.0), (13.5, 40.0))
+    barn = diff(barn, rect2(21.8, 23.5, 28.2, 41.0))
+    return union(diff(barn, dilate(f, gap)), f)
+
+def opening(p, r):
+    """Морфологическое открытие: убирает острые хвостики и щепки уже 2r."""
+    edge = Path(); edge.addPath(p)
+    edge.stroke(2 * r, LineCap.ROUND_CAP, LineJoin.ROUND_JOIN, 4); edge.convertConicsToQuads()
+    return dilate(diff(p, edge), r)
+
+def round_tree(circles, trunk):
+    return union(*[circle(*c) for c in circles], rect2(*trunk))
+
+def central_park5(halo=0.7):
+    """Деревья — ровные круги, как везде в паке; расположение прежнее."""
+    p = central_park4()
+    import re
+    # берём ротонду и стволы из круга 5, кроны заменяем кругами
+    t1 = round_tree([(17.4, 11.4, 4.6), (12.2, 15.4, 4.0), (22.6, 15.4, 4.0)], (16.408, 15.0, 18.142, BASE))
+    t2 = round_tree([(34.4, 14.6, 4.4), (29.3, 18.4, 3.8), (39.4, 18.4, 3.8)], (32.985, 18.0, 34.875, BASE))
+    t1 = diff(t1, dilate(t2, halo))
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:607"]["svg"])
+    pav = P(ds[0]); orig = pav
+    for x0, x1, yl, yr in ((16.2, 18.3, 29.25, 29.15), (33.0, 35.0, 29.15, 29.25)):
+        pav = diff(pav, rect2(x0, 28.9, x1, 42.2))
+        pav = union(pav, inter(orig, poly((x0, 20), (x1, 20), (x1, yr), (x0, yl))))
+    for xa, xb, cx in ((0, 8.3, 7.12), (41.7, 50, 42.88)):
+        pav = diff(pav, rect2(xa, 30.35, xb, 32.5))
+        sgn = -1 if cx < 25 else 1
+        corner = rect2(min(cx, cx + sgn * 1.2), 29.3, max(cx, cx + sgn * 1.2), 30.5)
+        pav = diff(pav, diff(corner, circle(cx, 29.35, 1.0)))
+    trees = diff(union(t1, t2), dilate(pav, halo, join="miter"))
+    return union(pav, trees)
+
+def truck_solid2(halo=0.75):
+    """Колёса — ровные круги на прежних центрах; обе арки — один и тот же просвет вокруг колеса."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3005"]["svg"])
+    t = truck_slanted(n=1)
+    w1, w2 = P(ds[0]), P(ds[1])
+    c1 = ((w1.bounds[0] + w1.bounds[2]) / 2, (w1.bounds[1] + w1.bounds[3]) / 2); r1 = (w1.bounds[2] - w1.bounds[0]) / 2
+    c2 = ((w2.bounds[0] + w2.bounds[2]) / 2, (w2.bounds[1] + w2.bounds[3]) / 2); r2 = (w2.bounds[2] - w2.bounds[0]) / 2
+    r = (r1 + r2) / 2
+    body = diff(t, w1, w2)                                    # кузов без старых колёс
+    body = union(body, rect2(c1[0] - r - halo - 0.5, 35.0, c1[0] + r + halo + 0.5, 38.67),   # закрываем старые арки
+                 inter(rect2(c2[0] - r - halo - 0.5, 35.0, c2[0] + r + halo + 0.5, 38.63), dilate(body, 0.01)))
+    body = inter(body, union(*[c for c in [t]]))              # не выходим за прежний силуэт кузова
+    body = union(body, inter(rect2(c1[0] - r - 1.5, 35.0, c1[0] + r + 1.5, 38.67), dilate(t, 3)))
+    wheels = union(circle(*c1, r), circle(*c2, r))
+    return union(diff(body, dilate(wheels, halo)), wheels)
+
+def church4(base_extra=3.0):
+    """Основание — прямоугольник по ширине стен (без карнизных «ушей»), верх основания
+    поднят до пяты арки — ступенька под сводом исчезает; храм выше за счёт основания."""
+    c = church3()
+    top = 27.92
+    c = diff(c, rect2(0, 27.0, 7.13, 31.3), rect2(42.89, 27.0, 50, 31.3))  # карнизные выступы
+    c = union(c, rect2(7.13, top, 42.89, 31.2))
+    # удлиняем основание вниз: всё, что ниже 33, сдвигаем на base_extra, промежуток заливаем
+    upper = inter(c, rect2(0, 0, 50, 33.0)); lower = inter(c, rect2(0, 33.0, 50, 50))
+    lower = move(lower, 0, base_extra)
+    fill = rect2(7.13, 32.9, 42.89, 33.1 + base_extra)        # дверь и окна уезжают вниз целиком
+    return union(upper, lower, fill)
+
+def rocket3(body_k=1.15, ex_k=0.85, anchor=(24.6, 26.6)):
+    """Ракета симметрична относительно своей оси (x + y = const): берём одну половину
+    корпуса и отражаем. Корпус крупнее, выхлоп меньше, концы выхлопа — прежние косые."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:612"]["svg"])
+    body = P(ds[3]); ex = union(*[P(d) for d in ds[:3]])
+    c = 45.0537 + 5.58252                                     # ось через нос под 45°
+    half = inter(body, poly((-10, -10), (c + 10, -10), (-10, c + 10)))
+    body = union(half, tf(half, (0, -1, -1, 0, c, c)))
+    ax, ay = anchor
+    body = tf(body, (body_k, 0, 0, body_k, ax - body_k * ax, ay - body_k * ay))
+    ex = tf(ex, (ex_k, 0, 0, ex_k, ax - ex_k * ax, ay - ex_k * ay))
+    return union(body, diff(ex, dilate(body, 0.01)))
+
+def mentors3():
+    """Наставник стоит: опущенная рука — часть корпуса, левая сторона — прямой скос
+    от плеча к основанию; второй рукой он пускает искры."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:639"]["svg"])
+    adult = union(P(ds[1]), poly((10.55, 43.1), (11.49, 34.6), (12.3, 43.1)))
+    A, B = (11.2, 26.0), (8.4, 43.1)                          # прямой скос: плечо → основание
+    left_cut = poly(A, B, (0, 43.1), (0, 20), (11.2, 20))
+    adult = diff(adult, left_cut)
+    adult = union(adult, inter(poly(A, B, (22, 43.1), (22, 24)), dilate(adult, 0.01)))
+    adult = union(adult, poly(A, B, (14.0, 43.1), (14.0, 25.4)))
+    people = union(adult, P(ds[0]), P(ds[2]), P(ds[3]))
+    big = sparkle(37.0, 12.4, 8.2)
+    return union(diff(people, dilate(big, 1.0)), big, sparkle(45.2, 3.4, 4.2))
+
+def sun3():
+    """Диск крупнее (r 12.5), лучи короче (4.5) и ближе к диску (просвет 2.6), углы острые."""
+    cx, cy = 25.0, 24.35
+    parts = [circle(cx, cy, 12.5)]
+    for j in range(8):
+        a = math.radians(j * 45)
+        parts.append(stroke(line_path([(cx + 15.1 * math.cos(a), cy + 15.1 * math.sin(a)),
+                                       (cx + 19.6 * math.cos(a), cy + 19.6 * math.sin(a))]), 3.6, cap="butt"))
+    return union(*parts)
+
+def hand_adapted():
+    """Ладонь чуть ближе к системе: запястье срезано вертикально (а не по диагонали),
+    белая линия пальца начинается прямым концом вместо круглого."""
+    import re
+    hand = P(re.findall(r' d="([^"]+)"', SRC["2888:643"]["svg"])[0])
+    hand = union(hand, poly((8.4, 34.13), (12.0, 31.46), (12.0, 41.9), (8.4, 42.61)))
+    hand = diff(hand, rect2(0, 0, 8.4, 50))
+    hand = union(hand, rect2(20.7, 36.4, 21.45, 38.0))          # закрыли круглый конец линии
+    hand = diff(hand, rect2(21.0, 36.547, 21.6, 37.89))          # и открыли прямой
+    return hand
+
+def initiatives3():
+    k = 1.4
+    return union(hand_adapted(), bulb_group(27.6, 28.6 - 10.1 * k, k))
+
+def mutual_help():
+    """Взаимопомощь на той же ладони, сердце — соразмерно лампочке в «Поддержке инициатив»."""
+    import re
+    heart = P(re.findall(r' d="([^"]+)"', SRC["4254:3105"]["svg"])[1])
+    x0, y0, x1, y1 = heart.bounds; k = 19.0 / (x1 - x0)
+    heart = tf(heart, (k, 0, 0, k, 27.6 - k * (x0 + x1) / 2, 28.4 - k * y1))
+    return union(hand_adapted(), heart)
+
+def ellipse(cx, cy, rx, ry):
+    k = 0.5523; p = Path(); p.moveTo(cx + rx, cy)
+    p.cubicTo(cx + rx, cy + k * ry, cx + k * rx, cy + ry, cx, cy + ry)
+    p.cubicTo(cx - k * rx, cy + ry, cx - rx, cy + k * ry, cx - rx, cy)
+    p.cubicTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry)
+    p.cubicTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy); p.close(); return p
+
+def coin_stack(cx, ytop, ybot, rx=12.0, ry=5.1, gap=0.9, coins=2):
+    """Стопка монет: цилиндр, верхняя грань и монеты разделены ровными дугами-просветами."""
+    body = union(ellipse(cx, ytop, rx, ry), rect2(cx - rx, ytop, cx + rx, ybot), ellipse(cx, ybot, rx, ry))
+    cuts = []
+    for j in range(coins):
+        y = ytop + (ybot - ytop) * j / coins
+        cuts.append(diff(ellipse(cx, y + gap, rx + 0.01, ry), ellipse(cx, y, rx + 1, ry), rect2(0, 0, 50, y)))
+    top = ellipse(cx, ytop, rx, ry)
+    side = diff(body, *cuts)
+    return union(side, top)
+
+def capital():
+    """Капитал проще и в системе пака: две стопки монет, без мелких прорезей по рёбрам;
+    верх и монеты разделены ровными просветами 0.9, задняя стопка отделена просветом 1.6."""
+    front = coin_stack(30.55, 29.6, 38.84)
+    back = coin_stack(19.46, 14.04, 23.7)          # чуть выше, чтобы дуга не упиралась в просвет щепкой
+    return union(diff(back, dilate(front, 1.6)), front)
+
+def coworking2(bezel=0.8):
+    """Монитор без клавиатуры, рамка толще на bezel со всех сторон экрана."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:632"]["svg"])
+    mon = P(ds[1])
+    screen = rect2(7.57 + bezel, 8.85 + bezel, 42.40 - bezel, 29.10 - bezel, 0.8)
+    outer = mon
+    for c in mon.contours:                                   # силуэт монитора без проёма экрана
+        if c.bounds[0] < 6: outer = Path(); c.draw(outer.getPen()); outer = union(outer, Path())
+    stand = diff(mon, rect2(0, 0, 50, 32.0))
+    return union(diff(inter(outer, rect2(0, 0, 50, 32.1)), screen), stand)
+
 # ── сборка ─────────────────────────────────────────────────────────────────────
 
 ICONS = {
