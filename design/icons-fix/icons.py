@@ -293,7 +293,7 @@ def seg_band(a, b, w):
     d = norm(sub(b, a)); n = mul(perp(d), w / 2)
     return poly(add(a, n), add(b, n), sub(b, n), sub(a, n))
 
-def construction(right=42.0, gap=1.6, halo=1.2):
+def construction(right=42.0, gap=1.6, halo=1.2, windows=True):
     # ── кран
     mx0, mx1, rail = 14.14, 20.95, 1.85          # мачта: две стойки и решётка
     jib_t, jib_b = 12.8, 14.8                    # стрела
@@ -335,7 +335,7 @@ def construction(right=42.0, gap=1.6, halo=1.2):
     y0 = roof_y + 2.0; gy = (BASE - y0 - 3 * wh) / 4
     wins = [rect2(bx0 + m + c * (ww + m), y0 + gy + r * (wh + gy), bx0 + m + c * (ww + m) + ww, y0 + gy + r * (wh + gy) + wh)
             for c in range(2) for r in range(3)]
-    house_big = union(slab, diff(body, *wins))
+    house_big = union(slab, diff(body, *wins) if windows else body)
     # ── домик: строго симметричный, скаты одного уклона, «галочка» кровли той же толщины
     hx0, hx1, eave, hap = 12.4, 23.6, 37.6, 34.0
     hc = (hx0 + hx1) / 2
@@ -501,7 +501,10 @@ def active_city():
     r = sharp_knee(r, (35.2395, 28.9352), norm((35.2395 - 33.5, 28.9352 - 27.74)),
                    (34.4641, 31.8112), norm((36.3313 - 34.4641, 30.0924 - 31.8112)),
                    rect2(34.3, 28.3, 37.6, 31.75))
-    r = oblique_cut(r, (45.45, 12.3), (-0.74, 0.67), 2.0, 12)    # рука вперёд: нижний угол впереди
+    # рука вперёд — как у «Молодёжи»: конец скруглён полукругом по ширине руки
+    d_h = norm((-0.74, 0.67)); A, B = section(r, (45.45, 12.3), d_h, 1.9)
+    r = oblique_cut(r, (45.45, 12.3), d_h, 1.9, math.degrees(math.atan2(*reversed(perp(d_h)))))
+    r = union(r, circle(*mul(add(A, B), .5), math.dist(A, B) / 2))
     r = oblique_cut(r, (12.55, 23.3), (0.73, -0.68), 3.4, 85)    # рука назад
     r = oblique_cut(r, (24.55, 39.2), (0.62, -0.78), 3.2, 80)    # нога вперёд — в носок
     r = oblique_cut(r, (4.55, 43.9), (0.75, -0.66), 4.6, 0)      # толчковая — ровно «по земле»
@@ -683,14 +686,270 @@ def church():
     rest = [P(d) for d in ds[1:]]
     return union(main, *rest)
 
+# ── круг 3 ───────────────────────────────────────────────────────────────────
+
+def central_park3(halo=0.7, grow=1.15):
+    """Исходник. Деревья стоят ЗА входной группой: ротонда целиком залита и ничем
+    не разрезана, а стволы (2-й и 4-й столбы) отделены от неё только горизонтальными
+    просветами — над кровлей, под кровлей и над цоколем. Правое дерево крупнее."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:607"]["svg"])
+    pav, t1, t2 = P(ds[0]), P(ds[1]), P(ds[2])
+    orig = pav
+    for x0, x1, yl, yr in ((16.2, 18.3, 29.25, 29.15), (33.0, 35.0, 29.15, 29.25)):   # 2-й и 4-й столбы — стволы
+        pav = diff(pav, rect2(x0, 28.9, x1, 42.2))
+        # нижняя кромка кровли над бывшим столбом — по линии соседних пролётов, без ступеньки
+        pav = union(pav, inter(orig, poly((x0, 20), (x1, 20), (x1, yr), (x0, yl))))
+    bx = (33.105 + 34.749) / 2                              # правое дерево растёт от основания ствола
+    t2 = tf(t2, (grow, 0, 0, grow, bx - grow * bx, 26.0 - grow * 26.0))
+    w2 = (34.749 - 33.105) * grow / 2
+    trunks = union(rect2(16.408, 24.0, 18.142, BASE), rect2(bx - w2, 24.0, bx + w2, BASE))
+    t1 = diff(t1, dilate(t2, halo))                         # между кронами тот же просвет
+    trees = union(t1, t2, trunks)
+    trees = diff(trees, dilate(pav, halo, join="miter"))    # ротонда впереди — режет только по горизонтали
+    central_park3.gap = min_gap(diff(P(ds[1]), Path()), t2)
+    return union(pav, trees)
+
+def church2():
+    """Без просвета между карнизом и стенами; купола слиты с барабанами, барабаны — с кровлей."""
+    c = church()
+    bridges = [rect2(7.13, 30.1, 42.89, 31.2),                       # карниз и стены — одно целое
+               rect2(10.34, 25.4, 14.88, 26.7), rect2(10.34, 28.1, 14.88, 28.9),   # левый купол
+               rect2(35.07, 25.4, 39.63, 26.7), rect2(35.07, 28.1, 39.63, 28.9),   # правый купол
+               rect2(21.63, 20.9, 28.34, 22.2), rect2(21.63, 24.8, 28.34, 25.8)]   # центральный
+    return union(c, *bridges)
+
+def construction_plain():
+    """Как утверждено, но у большого дома нет окон — как у маленького."""
+    return construction(windows=False)
+
+def hotel():
+    """Дверь — один проём шириной с окна, без тонкой перемычки посередине."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2891:614"]["svg"])
+    roof, body = P(ds[0]), P(ds[1])
+    body = union(body, rect2(20.6, 32.0, 29.4, 41.07))      # заливаем старую двойную дверь
+    body = diff(body, rect2(22.23, 32.04, 27.77, 41.2))     # один проём, ширина = окну (5.54)
+    return union(roof, body)
+
+def coworking():
+    """Монитор на подставке, без отдельной клавиатуры снизу."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2888:632"]["svg"])
+    return P(ds[1])
+
+def rocket():
+    """Выхлоп обрезан одной вертикалью (потом она встанет на левую направляющую 4)."""
+    return inter(src_path("2888:612"), rect2(7.35, 0, 50, 50))
+
+def kite():
+    """Оба хвоста змея обрезаны одной вертикалью: верхний продлён по своему ходу."""
+    p = src_path("2892:626")
+    a, b = (37.3008, 33.4961), (40.042, 36.0508)            # торец верхнего хвоста
+    da, db = norm((37.3008 - 29.6828, 33.4961 - 38.838)), norm((40.042 - 31.4391, 36.0508 - 41.1706))
+    ext = poly(a, add(a, mul(da, 8)), add(b, mul(db, 8)), b)
+    return inter(union(p, ext), rect2(0, 0, 43.2949, 50))
+
+def inset(pts, t):
+    """Выпуклый многоугольник, все стороны которого сдвинуты внутрь на t."""
+    from geom import intersect
+    n = len(pts); cx = sum(p[0] for p in pts) / n; cy = sum(p[1] for p in pts) / n
+    lines = []
+    for k in range(n):
+        a, b = pts[k], pts[(k + 1) % n]; d = norm(sub(b, a)); m = perp(d)
+        if (cx - a[0]) * m[0] + (cy - a[1]) * m[1] < 0: m = mul(m, -1)
+        lines.append((add(a, mul(m, t)), d))
+    return [intersect(*lines[k - 1], *lines[k]) for k in range(n)]
+
+def truck_slanted(k=0.30, gap=1.6, n=3, x0=7.6, x1=29.0):
+    """Грузовик в движении: кузов из n наклонных секций с просветом gap,
+    задняя стенка кабины наклонена так же; кабина спереди и колёса — исходные."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["4254:3005"]["svg"])
+    w1, w2, body = P(ds[0]), P(ds[1]), P(ds[2])
+    yt, yb = 15.63, 38.67; ym = (yt + yb) / 2
+    xs = lambda xm, y: xm + k * (ym - y)                     # наклонная через точку (xm, ym)
+    gx = gap * math.sqrt(1 + k * k)                          # просвет по нормали → по горизонтали
+    bw = (x1 - x0 - (n - 1) * gx) / n
+    blocks = []
+    for j in range(n):
+        a = x0 + j * (bw + gx); b = a + bw
+        blocks.append(poly((xs(a, yt), yt), (xs(b, yt), yt), (xs(b, yb), yb), (xs(a, yb), yb)))
+    cab = inter(body, rect2(31.0, 0, 50, 50))                # исходная кабина справа
+    rear = x1 + gx                                           # задняя стенка кабины — параллельно секциям
+    cab = union(cab, poly((xs(rear, 19.68), 19.68), (33.0, 19.68), (33.0, yb - 0.04), (xs(rear, yb - 0.04), yb - 0.04)))
+    cab = diff(cab, poly((-10, -10), (xs(rear, -10), -10), (xs(rear, 60), 60), (-10, 60)))
+    win = poly((xs(rear + 1.45, 22.03), 22.03), (38.4, 22.03), (41.27, 29.14), (xs(rear + 1.45, 29.14), 29.14))
+    cab = diff(cab, win)
+    wheels = union(w1, w2)
+    return union(diff(union(*blocks, cab), dilate(wheels, 0.75)), wheels)
+
+def scales():
+    """Весы геометрично: прямая балка без навершия, прямая стойка, основание-полуовал,
+    одинаковые чаши на треугольных подвесах; всё симметрично."""
+    k = 0.5523
+    def half_ellipse(cx, cy, rx, ry):                       # нижняя половина эллипса
+        p = Path(); p.moveTo(cx - rx, cy)
+        p.cubicTo(cx - rx, cy + k * ry, cx - k * rx, cy + ry, cx, cy + ry)
+        p.cubicTo(cx + k * rx, cy + ry, cx + rx, cy + k * ry, cx + rx, cy); p.close(); return p
+    def dome(cx, cy, rx, ry):                               # верхняя половина эллипса
+        p = Path(); p.moveTo(cx - rx, cy)
+        p.cubicTo(cx - rx, cy - k * ry, cx - k * rx, cy - ry, cx, cy - ry)
+        p.cubicTo(cx + k * rx, cy - ry, cx + rx, cy - k * ry, cx + rx, cy); p.close(); return p
+    beam = rect2(8.6, 13.0, 41.4, 15.6)
+    post = rect2(23.7, 15.5, 26.3, 38.0)
+    base = dome(25.0, BASE, 9.5, 5.8)
+    parts = [beam, post, base]
+    for xc in (11.5, 38.5):
+        rim, half, t = 30.6, 6.9, 1.7
+        tri = [(xc, 15.5), (xc + half, rim), (xc - half, rim)]
+        parts += [diff(poly(*tri), poly(*inset(tri, t))), half_ellipse(xc, rim, 7.3, 5.4),
+                  rect2(xc - 7.3, rim - 0.01, xc + 7.3, rim + 0.4)]
+    return union(*parts)
+
+def glider(span=40.0, angle=45.0, cx=25.0, cy=25.05, ratio=1.55, k=1.3):
+    """Десантный планёр А-7 (завод № 499, Заводоуковск, 1941–42) сверху:
+    размах к длине ≈ 1.65, высокоплан с длинным узким крылом, гондола с балкой,
+    тупой нос с кабиной, стабилизатор. Летит по диагонали в правый верхний угол."""
+    L = span / ratio
+    # локальные координаты: нос вправо (+x), центр в начале координат
+    nose, tail = L * 0.5, -L * 0.5
+    xw = nose - L * 0.30                                    # передняя кромка крыла у корня
+    c_root, c_tip = span * 0.14 * k, span * 0.085 * k
+    pod_w, boom_w = span * 0.11 * k, span * 0.045 * k
+    parts = []
+    # гондола: от носа до задней кромки крыла, нос скруглён
+    pod_end = xw - c_root - L * 0.04
+    r = pod_w / 2
+    parts.append(rect2(pod_end, -r, nose - r, r))
+    parts.append(circle(nose - r, 0, r))
+    # балка: сужается к хвосту
+    parts.append(poly((pod_end + 0.01, -r), (tail + L * 0.06, -boom_w / 2), (tail + L * 0.06, boom_w / 2), (pod_end + 0.01, r)))
+    # крыло: прямая передняя кромка, сужение по задней, скруглённые законцовки
+    for sg in (-1, 1):
+        y_tip = sg * span / 2
+        tip = (xw - (c_root - c_tip) * 0.15, y_tip)
+        wing = poly((xw, 0), (xw, y_tip - sg * c_tip / 2), (xw - c_tip, y_tip - sg * c_tip / 2), (xw - c_root, 0))
+        parts.append(wing)
+        parts.append(circle(xw - c_tip / 2, y_tip - sg * c_tip / 2, c_tip / 2))
+    # стабилизатор
+    ts, tc = span * 0.34, span * 0.09
+    xt = tail + tc
+    for sg in (-1, 1):
+        parts.append(poly((xt, 0), (xt, sg * (ts / 2 - tc * 0.4)), (tail + tc * 0.15, sg * (ts / 2 - tc * 0.4)), (tail, 0)))
+        parts.append(circle(xt - tc * 0.42, sg * (ts / 2 - tc * 0.42), tc * 0.42))
+    parts.append(rect2(tail, -boom_w / 2, tail + L * 0.07, boom_w / 2))
+    g = union(*parts)
+    a = math.radians(-angle)                                # минус — против часовой на экране: нос вверх-вправо
+    m = (math.cos(a), math.sin(a), -math.sin(a), math.cos(a), cx, cy)
+    return tf(g, m)
+
+# ── Ф1 · Инвестиции v3: одно крыло «К» из знака + стрелка ──────────────────────
+
+def logo_upper_arm():
+    """Верхнее крыло «К» (три полосы от стыка вверх) — без нижних полос и букв «З».
+    Нижняя кромка внешней полосы от стыка до развилки достроена кубикой."""
+    w = logo_wings()
+    c = bez((21.0, 33.685), (1, 0), 8.0, (43.2286, 30.7559), norm((47.1504 - 43.2286, 29.602 - 30.7559)), 2.0)
+    r = Path(); r.moveTo(-5, 33.685); r.lineTo(*c[0]); r.cubicTo(*c[1], *c[2], *c[3])
+    r.cubicTo(44.5505, 30.4009, 45.8725, 30.0458, 47.1504, 29.602)
+    r.cubicTo(61.3837, 24.8533, 74.5153, 14.6457, 74.9559, 1.42019)
+    r.lineTo(80, 1.42019); r.lineTo(80, -5); r.lineTo(-5, -5); r.close()
+    return inter(w, r)
+
+def investments3(theta=38.0, s=0.82, L=7.2, H=4.3, tip=(45.6, 4.6), clip=True):
+    """Крыло, развёрнутое так, что полосы выходят из левого нижнего угла (их концы
+    срезает рамка), а стык смотрит вверх-вправо под углом theta. Из стыка — стрелка."""
+    J0 = (21.11, (27.5161 + 33.685) / 2)
+    a = (math.cos(math.radians(theta)), -math.sin(math.radians(theta)))
+    J = sub(tip, mul(a, L))
+    # поворот на 180° вокруг стыка, затем на −theta, масштаб s, перенос стыка в J
+    ct, st = math.cos(math.radians(-theta)), math.sin(math.radians(-theta))
+    # итоговая матрица: p' = J + s·R(−θ)·(−(p − J0))
+    m = (-s * ct, -s * st, s * st, -s * ct, 0, 0)
+    m = (m[0], m[1], m[2], m[3], J[0] - (m[0] * J0[0] + m[2] * J0[1]), J[1] - (m[1] * J0[0] + m[3] * J0[1]))
+    arm = tf(logo_upper_arm(), m)
+    n = perp(a)
+    base = sub(J, mul(a, 0.05))
+    head = poly(tip, add(base, mul(n, H)), sub(base, mul(n, H)))
+    p = union(arm, head)
+    return canvas_clip(p) if clip else p
+
+# ── Комфортный город v4: аккуратный второй этаж ─────────────────────────────────
+
+def city3(variant="B", halo=0.7):
+    """A — второй этаж только у центральной «хрущёвки», боковые дома как в исходнике;
+    B — всем домам по невысокому второму этажу (D = 5, а не 9).
+    Общие правила: левая половина строится, правая — зеркало; линии исходника
+    сохраняются и продолжаются параллельно; у центрального дома нет крыши,
+    его верх стоит на одной линии с соседями."""
+    import re
+    ds = re.findall(r' d="([^"]+)"', SRC["2892:571"]["svg"])
+    ground, big_tree, small_tree = P(ds[1]), P(ds[2]), P(ds[4])
+    trees = union(big_tree, small_tree)
+    D = 5.0 if variant == "B" else 0.0
+    lin = lambda p0, p1: (lambda x: p0[1] + (p1[1] - p0[1]) * (x - p0[0]) / (p1[0] - p0[0]))
+    fx0, fx1 = 3.84, 10.16
+    f_top = lin((fx0, 25.74), (fx1, 25.02)); f_bot = lin((fx0, 36.18), (fx1, 33.52))
+    face = poly((fx0, f_top(fx0) - D), (fx1, f_top(fx1) - D), (fx1, f_bot(fx1)), (fx0, f_bot(fx0)))
+    wx0, wx1 = fx1 + halo, 17.73
+    w_top = lin((10.96, 25.2), (17.73, 26.61)); w_bot = lin((10.96, 33.07), (17.73, 30.17))
+    wall = poly((wx0, w_top(wx0) - D), (wx1, w_top(wx1) - D), (wx1, w_bot(wx1)), (wx0, w_bot(wx0)))
+    ww = []
+    rows = (0.0, -D) if D else (0.0,)
+    for x0, x1 in ((12.0, 13.56), (14.35, 15.61), (16.23, 17.2)):
+        for dy in rows:                                     # окна — копии исходного ряда
+            t0, t1 = w_top(x0) + 1.74 + dy, w_top(x1) + 1.74 + dy
+            ww.append(poly((x0, t0), (x1, t1), (x1, t1 + 3.17), (x0, t0 + 3.17)))
+    wall = diff(wall, *ww)
+    e_front = lambda x: f_top(x) - D - halo
+    e_side = lambda x: w_top(x) - D - halo
+    cx = (e_side(0) - e_front(0)) / ((e_front(1) - e_front(0)) - (e_side(1) - e_side(0)))
+    C = (cx, e_front(cx)); apex = (10.05, 21.58 - D); L = 3.5
+    roof = poly((L, e_front(L) - 0.18), apex, (wx1, e_side(wx1) - 1.0), (wx1, e_side(wx1)), C, (L, e_front(L)))
+    house = diff(union(face, wall, roof), dilate(trees, halo))
+    left = union(house, ground, trees)
+    # центральная «хрущёвка»: верх — на линии конька соседних крыш (A) или верха их стен (B)
+    cx0, cx1, cb = wx1 + halo, 50 - wx1 - halo, 31.81
+    ct = apex[1] if variant == "A" else w_top(wx1) - D
+    body = rect2(cx0, ct, cx1, cb)
+    lo_t, lo_b = 26.2, 28.35                               # нижний ряд — как в исходнике
+    up_t = ct + (lo_t - 24.99)                             # верхний ряд: тот же отступ от верха, что был
+    up_b = up_t + (lo_b - lo_t)
+    cw = [rect2(24.03, 29.25, 25.97, cb + 1)]
+    for t, b in ((lo_t, lo_b), (up_t, up_b)):
+        for x0, x1 in ((19.99, 21.94), (24.03, 25.97), (28.06, 30.01)):
+            cw.append(rect2(x0, t, x1, b))
+    center = diff(diff(body, *cw), dilate(union(trees, flip_x(trees)), halo))
+    return union(left, flip_x(left), center)
+
+def mentors():
+    """Наставники: убран тонкий белый клин внизу корпуса взрослого — силуэт цельный,
+    как у бегуна. Головы и рука со скруглённой кистью совпадают с бегуном."""
+    return union(src_path("2888:639"), poly((10.55, 43.1), (11.49, 34.6), (12.3, 43.1)))
+
+def logistics3():
+    """Временная, аккуратнее прежней: тоньше древко, меньше наконечник. Переделаю по референсам."""
+    return logistics2(t=3.0, hb=11.0, hl=8.0, y1=18.0, y2=32.1)
+
+def glider_original_diag():
+    """Исходный силуэт планёра из пака, развёрнутый носом в правый верхний угол."""
+    g = src_path("2891:591"); x0, y0, x1, y1 = g.bounds
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    a = math.radians(45)                                    # нос смотрел вверх → поворот по часовой на 45°
+    c, s_ = math.cos(a), math.sin(a)
+    return tf(g, (c, s_, -s_, c, 25 - (c * cx - s_ * cy), 25 - (s_ * cx + c * cy)))
+
 # ── сборка ─────────────────────────────────────────────────────────────────────
 
 ICONS = {
-    "investments": investments2,
+    "investments": lambda: investments3(theta=20, s=0.88, tip=(46, 9.8)),
+    "investments-flat": lambda: investments3(theta=0, s=0.649, tip=(46, 23.0), clip=False),
     "tourism": tourism2,
     "logistics": logistics2,
     "park": central_park2,
-    "city": city2,
+    "city": lambda: city3("B"),
+    "city-a": lambda: city3("A"),
     "construction": construction,
     "active": active_city,
     "youth": youth_runner,

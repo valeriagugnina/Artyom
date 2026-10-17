@@ -15,13 +15,18 @@ from lib import *
 import icons as I
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401"}
+SKIP = {"1256:712", "4268:5960", "1482:1399", "1482:1400", "1482:1401",
+        "2888:677"}                                     # старое «Участие» убрано из набора
 
 REBUILT = {   # узел → функция новой версии
-    "4254:1269": I.investments2, "4254:3107": I.tourism2, "2888:570": I.logistics2,
-    "2892:607": I.central_park2, "2892:571": I.city2, "2888:583": I.construction,
-    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church,
+    "4254:1269": lambda: I.investments3(theta=20, s=0.88, tip=(46, 9.8)),
+    "4254:3107": I.tourism2, "2888:570": I.logistics3,
+    "2892:607": I.central_park3, "2892:571": lambda: I.city3("B"), "2888:583": I.construction_plain,
+    "2888:595": I.active_city, "4254:3034": I.youth_runner, "2892:580": I.church2,
+    "2891:614": I.hotel, "2888:632": I.coworking, "2888:612": I.rocket, "2892:626": I.kite,
+    "4254:3191": I.scales, "2891:591": I.glider, "4254:3005": I.truck_slanted, "2888:639": I.mentors,
 }
+LEFT_CUT = {"2888:612"}    # ракета: срез выхлопа — на левую направляющую 4, низ — на базу
 RENAME = {"4254:3193": "Участие",                     # две ладошки — это «Участие»
           "2888:677": "Участие · старый вариант"}
 
@@ -48,6 +53,9 @@ def place(node, p):
         if FULL[node] is None: return 1.0, 0.0, 0.0, "как построено"
         t, b = FULL[node]; s = (b - t) / h
         return s, 25 - s * (x0 + x1) / 2, b - s * y1, "по высоте поля"
+    if node in LEFT_CUT:
+        s = min(39.1 / h, (RIGHT - LEFT) / w)
+        return s, LEFT - s * x0, BASE - s * y1, "срез по левой направляющей"
     f = ink_ratio(p)
     area = A_TARGET * (F_REF / f) ** 0.25
     if node in ROUND: area *= 1.10
@@ -58,6 +66,19 @@ def place(node, p):
     if node in FLOAT: dy = (TOP + BASE) / 2 - s * (y0 + y1) / 2
     else: dy = BASE - s * y1
     return s, dx, dy, f"плотность {f:.2f}"
+
+VARIANTS = {   # узел → дополнительные варианты для страницы (в пак не идут)
+    "4254:1269": [("investments-flat", lambda: I.investments3(theta=0, s=0.649, tip=(46, 23.0), clip=False), "float")],
+    "2892:571": [("city-a", lambda: I.city3("A"), None)],
+    "2891:591": [("glider-orig", I.glider_original_diag, None)],
+}
+
+def variant_place(node, mode, p):
+    if mode == "float":                                     # просто вписать по центру поля
+        x0, y0, x1, y1 = p.bounds; w, h = x1 - x0, y1 - y0
+        s = min((RIGHT - LEFT) / w, (BASE - TOP) / h)
+        return s, 25 - s * (x0 + x1) / 2, (TOP + BASE) / 2 - s * (y0 + y1) / 2
+    s, dx, dy, _ = place(node, p); return s, dx, dy
 
 def main():
     out = os.path.join(HERE, "build/pack"); os.makedirs(out, exist_ok=True)
@@ -76,6 +97,12 @@ def main():
                          float=node in FLOAT))
         print(f"{name[:34]:36s} s={s:.3f}  x {b[0]:5.2f}…{b[2]:5.2f}  y {b[1]:5.2f}…{b[3]:5.2f}  {note}")
     json.dump(meta, open(os.path.join(HERE, "build/pack.json"), "w"), ensure_ascii=False, indent=1)
+    vd = os.path.join(HERE, "build/variants"); os.makedirs(vd, exist_ok=True)
+    for node, vs in VARIANTS.items():
+        for slug, fn, mode in vs:
+            p = fn(); s, dx, dy = variant_place(node, mode, p)
+            open(os.path.join(vd, f"{slug}.svg"), "w").write(svg(tf(p, (s, 0, 0, s, dx, dy))))
+            print("вариант", slug, round(s, 3))
 
 if __name__ == "__main__":
     main()
